@@ -53,9 +53,12 @@ namespace Anidex
                 client.BaseAddress = new Uri("https://api.jikan.moe/v4/");
             });
 
-            builder.Services.AddHttpClient<VNDBService>();
+            builder.Services.AddHttpClient<VNDBService>(client => {
+                client.BaseAddress = new Uri("https://api.vndb.org/kana/");
+            });
 
             builder.Services.AddScoped<MediaService>();
+            builder.Services.AddScoped<ThemeService>();
 
             var app = builder.Build();
 

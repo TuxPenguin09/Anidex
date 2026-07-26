@@ -1,11 +1,80 @@
-﻿@page "/"
+@page "/"
+@inject Anidex.Services.MediaService MediaService
 
 <PageTitle>Home</PageTitle>
 
-<h1>MyAnimeList</h1>
+<div class="mx-auto max-w-7xl px-6 py-8">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-bold text-zinc-900 dark:text-white">Recommended Anime</h1>
+        <a href="/anime" class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">View All</a>
+    </div>
 
-MyAnimeList chuchu...
+    @if (_recommendedAnime == null)
+    {
+        <div class="flex items-center justify-center py-12">
+            <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+            <span class="ml-3 text-zinc-400">Loading recommendations...</span>
+        </div>
+    }
+    else if (!_recommendedAnime.Any())
+    {
+        <div class="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 px-6 py-12 text-center text-zinc-400">
+            No recommendations found at the moment.
+        </div>
+    }
+    else
+    {
+        <div class="relative overflow-hidden" style="max-width: 100%;">
+            <div class="flex gap-6 pb-6 snap-x scroll-smooth no-scrollbar" style="overflow-x: auto; overflow-y: hidden; width: 100%; max-width: 100%;">
+                @foreach (var anime in _recommendedAnime)
+                {
+                    <div class="group snap-start flex flex-col overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-900 transition-all duration-300 hover:bg-zinc-200 dark:hover:bg-zinc-800 hover:shadow-xl hover:-translate-y-2" style="flex: 0 0 12rem; width: 12rem;">
+                        <div class="overflow-hidden bg-zinc-200 dark:bg-zinc-800" style="aspect-ratio: 3 / 4;">
+                            @if (!string.IsNullOrEmpty(anime.CoverImage))
+                            {
+                                <img src="@anime.CoverImage" alt="@anime.Title" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" class="transition duration-500 group-hover:scale-110" />
+                            }
+                            else
+                            {
+                                <div class="flex items-center justify-center text-zinc-400 dark:text-zinc-600" style="width: 100%; height: 100%;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                </div>
+                            }
+                        </div>
+                        <div class="p-3">
+                            <h3 class="line-clamp-2 text-sm font-medium text-zinc-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                                @anime.Title
+                            </h3>
+                            <div class="mt-1 flex items-center justify-between">
+                                <span class="text-xs text-zinc-500 dark:text-zinc-500">@anime.Source</span>
+                                @if (anime.Score.HasValue)
+                                {
+                                    <span class="text-xs font-bold text-yellow-600 dark:text-yellow-500">★ @anime.Score.Value</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
 
-<h1>The Visual Novel Database</h1>
+@code {
+    private List<Anidex.Models.Media>? _recommendedAnime;
 
-VNDB chuchu...
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _recommendedAnime = await MediaService.GetRecommendedAnimeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error fetching recommendations: {ex.Message}");
+            _recommendedAnime = new List<Anidex.Models.Media>();
+        }
+    }
+}

@@ -1,8 +1,31 @@
 ﻿@inherits LayoutComponentBase
+@inject Anidex.Services.ThemeService ThemeService
 
-<Header />
+<div class="min-h-screen transition-colors duration-300 bg-zinc-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+    <Header />
 
-@Body
+    <main>
+        @Body
+    </main>
+</div>
+
+<!--- <div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div> --->
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ThemeService.InitializeAsync();
+            StateHasChanged();
+        }
+    }
+}
+
 
 <!---<div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
