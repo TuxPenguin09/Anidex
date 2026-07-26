@@ -48,10 +48,14 @@ namespace Anidex
 
             builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
-            builder.Services.AddHttpClient<MalService>();
+            builder.Services.AddHttpClient<MalService>(client =>
+            {
+                client.BaseAddress = new Uri("https://api.jikan.moe/v4/");
+            });
+
             builder.Services.AddHttpClient<VNDBService>();
 
-            builder.Services.AddHttpClient<MediaService>();
+            builder.Services.AddScoped<MediaService>();
 
             var app = builder.Build();
 

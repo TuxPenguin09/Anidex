@@ -1,3 +1,5 @@
+using Anidex.Models;
+
 namespace Anidex.Services;
 
 public class MediaService
@@ -9,5 +11,10 @@ public class MediaService
     {
         _malService = malService;
         _vndbService = vndbService;
+    }
+
+    public async Task<List<Media>> GetRecommendedAnimeAsync()
+    {
+        return await _malService.GetRecommendedAnimeAsync();
     }
 }
