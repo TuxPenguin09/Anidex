@@ -1,4 +1,4 @@
-﻿@page "/Account/Register"
+﻿@page "/Account/Join"
 
 @using System.ComponentModel.DataAnnotations
 @using System.Text
@@ -15,41 +15,50 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Register</PageTitle>
+<PageTitle>Join</PageTitle>
 
-<h1>Register</h1>
+<div class="mx-auto max-w-7xl px-6 py-8">
+    <div class="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[2fr_1fr]">
+        <section class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
+            <h1 class="text-3xl font-bold text-zinc-900 dark:text-white">Join</h1>
+            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Create your account to get started.</p>
 
-<div class="row">
-    <div class="col-lg-6">
-        <StatusMessage Message="@Message" />
-        <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register">
-            <DataAnnotationsValidator />
-            <h2>Create a new account.</h2>
-            <hr />
-            <ValidationSummary class="text-danger" role="alert" />
-            <div class="form-floating mb-3">
-                <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label for="Input.Email">Email</label>
-                <ValidationMessage For="() => Input.Email" class="text-danger" />
+            <StatusMessage Message="@Message" />
+
+            <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register" class="mt-6 space-y-4">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300" role="alert" />
+
+                <div>
+                    <label for="Input.Email" class="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Email</label>
+                    <InputText @bind-Value="Input.Email" id="Input.Email" class="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                    <ValidationMessage For="() => Input.Email" class="mt-1 block text-sm text-red-500" />
+                </div>
+
+                <div>
+                    <label for="Input.Password" class="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Password</label>
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" autocomplete="new-password" aria-required="true" placeholder="Password" />
+                    <ValidationMessage For="() => Input.Password" class="mt-1 block text-sm text-red-500" />
+                </div>
+
+                <div>
+                    <label for="Input.ConfirmPassword" class="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Confirm Password</label>
+                    <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" autocomplete="new-password" aria-required="true" placeholder="Confirm password" />
+                    <ValidationMessage For="() => Input.ConfirmPassword" class="mt-1 block text-sm text-red-500" />
+                </div>
+
+                <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30">
+                    Join
+                </button>
+            </EditForm>
+        </section>
+
+        <section class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
+            <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Use another service</h2>
+            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Create your account with an external provider.</p>
+            <div class="mt-4">
+                <ExternalLoginPicker />
             </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="Input.Password">Password</label>
-                <ValidationMessage For="() => Input.Password" class="text-danger" />
-            </div>
-            <div class="form-floating mb-3">
-                <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label for="Input.ConfirmPassword">Confirm Password</label>
-                <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger" />
-            </div>
-            <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
-        </EditForm>
-    </div>
-    <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
-            <ExternalLoginPicker />
         </section>
     </div>
 </div>

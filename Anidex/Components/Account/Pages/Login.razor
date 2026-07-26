@@ -11,62 +11,61 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Log in</PageTitle>
+<PageTitle>Login</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-lg-6">
-        <section>
+<div class="mx-auto max-w-7xl px-6 py-8">
+    <div class="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[2fr_1fr]">
+        <section class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
+            <h1 class="text-3xl font-bold text-zinc-900 dark:text-white">Login</h1>
+            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Use your local account to sign in.</p>
+
             <StatusMessage Message="@errorMessage" />
-            <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
+
+            <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login" class="mt-6 space-y-4">
                 <DataAnnotationsValidator />
-                <h2>Use a local account to log in.</h2>
-                <hr />
-                <ValidationSummary class="text-danger" role="alert" />
-                <div class="form-floating mb-3">
-                    <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username webauthn" aria-required="true" placeholder="name@example.com" />
-                    <label for="Input.Email" class="form-label">Email</label>
-                    <ValidationMessage For="() => Input.Email" class="text-danger" />
-                </div>
-                <div class="form-floating mb-3">
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="password" />
-                    <label for="Input.Password" class="form-label">Password</label>
-                    <ValidationMessage For="() => Input.Password" class="text-danger" />
-                </div>
-                <div class="checkbox mb-3">
-                    <label class="form-label">
-                        <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
-                        Remember me
-                    </label>
-                </div>
+                <ValidationSummary class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300" role="alert" />
+
                 <div>
-                    <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                    <label for="Input.Email" class="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Email</label>
+                    <InputText @bind-Value="Input.Email" id="Input.Email" class="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" autocomplete="username webauthn" aria-required="true" placeholder="name@example.com" />
+                    <ValidationMessage For="() => Input.Email" class="mt-1 block text-sm text-red-500" />
                 </div>
-                <hr />
-                <div class="d-flex flex-column">
-                    <span class="text-secondary mx-auto mt-2">OR</span>
-                    <PasskeySubmit Operation="PasskeyOperation.Request" Name="Input.Passkey" EmailName="Input.Email" class="btn btn-link mx-auto">Log in with a passkey</PasskeySubmit>
-                </div>
-                <hr />
+
                 <div>
-                    <p>
-                        <a href="Account/ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Register", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a href="Account/ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
+                    <label for="Input.Password" class="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Password</label>
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" autocomplete="current-password" aria-required="true" placeholder="Password" />
+                    <ValidationMessage For="() => Input.Password" class="mt-1 block text-sm text-red-500" />
+                </div>
+
+                <label class="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">
+                    <InputCheckbox @bind-Value="Input.RememberMe" class="h-4 w-4 rounded border-zinc-300 text-blue-600 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900" />
+                    Remember me
+                </label>
+
+                <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30">
+                    Login
+                </button>
+
+                <div class="space-y-2 border-t border-zinc-200 pt-4 text-sm dark:border-white/10">
+                    <a href="Account/ForgotPassword" class="block text-blue-600 hover:underline dark:text-blue-400">Forgot your password?</a>
+                    <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Join", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" class="block text-blue-600 hover:underline dark:text-blue-400">Create a new account</a>
+                    <a href="Account/ResendEmailConfirmation" class="block text-blue-600 hover:underline dark:text-blue-400">Resend email confirmation</a>
+                </div>
+
+                <div class="border-t border-zinc-200 pt-4 dark:border-white/10">
+                    <PasskeySubmit Operation="PasskeyOperation.Request" Name="Input.Passkey" EmailName="Input.Email" class="text-sm text-blue-600 transition hover:underline dark:text-blue-400">
+                        Log in with a passkey
+                    </PasskeySubmit>
                 </div>
             </EditForm>
         </section>
-    </div>
-    <div class="col-lg-4 col-lg-offset-2">
-        <section>
-            <h3>Use another service to log in.</h3>
-            <hr />
-            <ExternalLoginPicker />
+
+        <section class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
+            <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Use another service</h2>
+            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Sign in with an external provider.</p>
+            <div class="mt-4">
+                <ExternalLoginPicker />
+            </div>
         </section>
     </div>
 </div>

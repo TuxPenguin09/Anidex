@@ -1,0 +1,21 @@
+@page "/login"
+@inject NavigationManager NavigationManager
+
+<PageTitle>Login</PageTitle>
+
+<p class="px-6 py-8 text-zinc-500 dark:text-zinc-400">Redirecting to login...</p>
+
+@code {
+	[SupplyParameterFromQuery]
+	private string? ReturnUrl { get; set; }
+
+	protected override void OnInitialized()
+	{
+		var loginUrl = NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?>
+		{
+			["ReturnUrl"] = ReturnUrl
+		});
+
+		NavigationManager.NavigateTo(loginUrl, forceLoad: true);
+	}
+}

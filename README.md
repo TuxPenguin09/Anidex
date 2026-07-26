@@ -18,3 +18,19 @@ Open your browser to the URL provided in the terminal (usually `https://anidex.d
 
 ## Troubleshooting DB Connections:
 If you encounter a connection error, check `Anidex/appsettings.json`. The DefaultConnection is currently configured for `(localdb)\mssqllocaldb`. If your local instance has a different name, update it there.
+
+## Tailwind CSS:
+This project uses Tailwind CSS v4. The generated stylesheet is `Anidex/wwwroot/app.css`, built from `Anidex/Styles/app.css`.
+
+### Tailwind commands (run inside `Anidex` folder):
+- Install frontend dependencies:
+`npm install`
+- Build CSS once:
+`npm run build:css`
+- Watch and rebuild CSS while developing:
+`npm run tailwind:watch`
+
+### Tailwind notes:
+- Source file: `Anidex/Styles/app.css`
+- Output file: `Anidex/wwwroot/app.css`
+- Razor files are explicitly scanned via `@source` directives in `Styles/app.css`.

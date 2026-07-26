@@ -1,0 +1,21 @@
+@page "/join"
+@inject NavigationManager NavigationManager
+
+<PageTitle>Join</PageTitle>
+
+<p class="px-6 py-8 text-zinc-500 dark:text-zinc-400">Redirecting to registration...</p>
+
+@code {
+	[SupplyParameterFromQuery]
+	private string? ReturnUrl { get; set; }
+
+	protected override void OnInitialized()
+	{
+		var registerUrl = NavigationManager.GetUriWithQueryParameters("Account/Join", new Dictionary<string, object?>
+		{
+			["ReturnUrl"] = ReturnUrl
+		});
+
+		NavigationManager.NavigateTo(registerUrl, forceLoad: true);
+	}
+}
