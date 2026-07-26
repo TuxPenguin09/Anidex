@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Anidex.Client/Anidex.Client.csproj" />
+  <Project Path="Anidex/Anidex.csproj" />
+</Solution>
