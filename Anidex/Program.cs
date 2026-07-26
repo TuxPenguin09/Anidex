@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
+using Anidex.Services;
+
 namespace Anidex
 {
     public class Program
@@ -45,6 +47,11 @@ namespace Anidex
                 .AddDefaultTokenProviders();
 
             builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
+            builder.Services.AddHttpClient<MalService>();
+            builder.Services.AddHttpClient<VNDBService>();
+
+            builder.Services.AddHttpClient<MediaService>();
 
             var app = builder.Build();
 
