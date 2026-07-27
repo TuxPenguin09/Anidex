@@ -8,4 +8,5 @@ public class Media
     public string? Description { get; set; }
     public string? CoverImage { get; set; }
     public double? Score { get; set; }
+    public string? Released { get; set; }
 }

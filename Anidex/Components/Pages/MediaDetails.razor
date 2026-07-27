@@ -1,0 +1,337 @@
+@page "/media/{id}"
+@page "/visual-novels/{VnId}"
+@using Anidex.Services
+@inject Anidex.Services.MediaService MediaService
+@inject Anidex.Services.CommentService CommentService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>@(_details?.Title ?? "Loading...") - Anidex</PageTitle>
+
+<div class="mx-auto max-w-5xl px-6 py-8">
+    @if (_errorMessage != null)
+    {
+        <div class="mx-auto max-w-2xl rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 p-4 text-center text-red-600 dark:text-red-400 my-12">
+            <div class="flex flex-col items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="font-medium">@_errorMessage</p>
+                <button @onclick="() => OnInitializedAsync()" class="text-xs underline hover:no-underline">Try again</button>
+            </div>
+        </div>
+    }
+    else if (_details == null)
+    {
+        <div class="flex items-center justify-center py-24">
+            <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+            <span class="ml-3 text-zinc-400">Fetching media details...</span>
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="flex flex-col items-center">
+                <div class="overflow-hidden rounded-2xl bg-zinc-200 dark:bg-zinc-800 shadow-xl" style="width: 300px; aspect-ratio: 3 / 4;">
+                    @if (!string.IsNullOrEmpty(_details.CoverImage))
+                    {
+                        <img src="@_details.CoverImage" alt="@_details.Title" class="h-full w-full object-cover" />
+                    }
+                    else
+                    {
+                        <div class="flex h-full w-full items-center justify-center text-zinc-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2 2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="md:col-span-2">
+                <h1 class="text-4xl font-bold text-zinc-900 dark:text-white mb-2">@_details.Title</h1>
+
+                @if (!string.IsNullOrWhiteSpace(_details.AlternativeTitle))
+                {
+                    <p class="mb-5 text-lg text-zinc-500 dark:text-zinc-400">@_details.AlternativeTitle</p>
+                }
+
+                @if (IsVisualNovel)
+                {
+                    <div class="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        @if (_details.Score.HasValue)
+                        {
+                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-white/10 dark:bg-zinc-900/50">
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Rating</p>
+                                <p class="mt-1 text-lg font-bold text-yellow-600 dark:text-yellow-500">★ @_details.Score.Value.ToString("0.0")</p>
+                            </div>
+                        }
+                        @if (_details.VoteCount.HasValue)
+                        {
+                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-white/10 dark:bg-zinc-900/50">
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Votes</p>
+                                <p class="mt-1 text-lg font-bold text-zinc-900 dark:text-white">@_details.VoteCount.Value.ToString("N0")</p>
+                            </div>
+                        }
+                        @if (!string.IsNullOrWhiteSpace(_details.Released))
+                        {
+                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-white/10 dark:bg-zinc-900/50">
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Released</p>
+                                <p class="mt-1 text-lg font-bold text-zinc-900 dark:text-white">@_details.Released</p>
+                            </div>
+                        }
+                        @if (_details.LengthMinutes.HasValue)
+                        {
+                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-white/10 dark:bg-zinc-900/50">
+                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Play time</p>
+                                <p class="mt-1 text-lg font-bold text-zinc-900 dark:text-white">@FormatPlayTime(_details.LengthMinutes.Value)</p>
+                            </div>
+                        }
+                    </div>
+                }
+
+                <div class="mb-8">
+                    <h2 class="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Description</h2>
+                    <p class="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                        @_details.Description
+                    </p>
+                </div>
+
+                @if (IsVisualNovel && (_details.Developers.Any() || _details.Languages.Any() || _details.Platforms.Any() || _details.Tags.Any()))
+                {
+                    <div class="mb-8 space-y-5">
+                        @if (_details.Developers.Any())
+                        {
+                            <div>
+                                <h2 class="mb-2 text-lg font-semibold text-zinc-900 dark:text-white">Developers</h2>
+                                <p class="text-zinc-600 dark:text-zinc-400">@string.Join(", ", _details.Developers)</p>
+                            </div>
+                        }
+                        @if (_details.Languages.Any() || _details.Platforms.Any())
+                        {
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                @if (_details.Languages.Any())
+                                {
+                                    <div>
+                                        <h2 class="mb-2 text-lg font-semibold text-zinc-900 dark:text-white">Languages</h2>
+                                        <p class="text-zinc-600 dark:text-zinc-400">@string.Join(", ", _details.Languages)</p>
+                                    </div>
+                                }
+                                @if (_details.Platforms.Any())
+                                {
+                                    <div>
+                                        <h2 class="mb-2 text-lg font-semibold text-zinc-900 dark:text-white">Platforms</h2>
+                                        <p class="text-zinc-600 dark:text-zinc-400">@string.Join(", ", _details.Platforms)</p>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        @if (_details.Tags.Any())
+                        {
+                            <div>
+                                <h2 class="mb-3 text-lg font-semibold text-zinc-900 dark:text-white">Tags</h2>
+                                <div class="flex flex-wrap gap-2">
+                                    @foreach (var tag in _details.Tags)
+                                    {
+                                        <span class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm text-blue-700 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-300">@tag</span>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+
+                @if (_details.Characters.Any())
+                {
+                    <div class="mb-8">
+                        <h2 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">Characters</h2>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach (var charName in _details.Characters)
+                            {
+                                <span class="rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 text-sm text-zinc-600 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-400">
+                                    @charName
+                                </span>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_details.ExternalUrl))
+                {
+                    <a href="@_details.ExternalUrl" target="_blank" rel="noreferrer" class="inline-flex items-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50 dark:border-blue-400/30 dark:text-blue-300 dark:hover:bg-blue-500/10">
+                        View on VNDB
+                    </a>
+                }
+            </div>
+        </div>
+
+        <div class="mt-12 border-t border-zinc-200 dark:border-white/10 pt-8">
+            <h2 class="text-2xl font-bold text-zinc-900 dark:text-white mb-6">Comments</h2>
+
+            <AuthorizeView>
+                <Authorized>
+                    <div class="mb-8">
+                        <div class="flex flex-col gap-3">
+                            <textarea @bind="_newCommentContent" placeholder="Write a comment..."
+                                      class="w-full rounded-xl bg-zinc-100 dark:bg-zinc-900 p-4 text-sm text-zinc-900 dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"></textarea>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <label class="text-xs text-zinc-500 dark:text-zinc-400">Upload media</label>
+                                    <input type="file" @onchange="HandleFileUpload" class="text-xs text-zinc-500" />
+                                </div>
+                                <button @onclick="PostComment" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition">Post Comment</button>
+                            </div>
+                        </div>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="mb-8 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-center text-sm text-zinc-500">
+                        Please <a href="/Account/Login" class="text-blue-600 hover:underline">login</a> to post comments.
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
+
+            <div class="space-y-6">
+                @if (_comments == null)
+                {
+                    <div class="flex justify-center py-8">
+                        <div class="h-6 w-6 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                    </div>
+                }
+                else if (!_comments.Any())
+                {
+                    <p class="text-center text-zinc-400 py-8">No comments yet. Be the first to share your thoughts!</p>
+                }
+                else
+                {
+                    @foreach (var comment in _comments)
+                    {
+                        <div class="flex gap-4 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/5">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-sm font-bold text-zinc-900 dark:text-white">@comment.UserName</span>
+                                    <span class="text-xs text-zinc-500">@comment.CreatedAt.ToLocalTime().ToString("g")</span>
+                                </div>
+                                <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">@comment.Content</p>
+                                @if (!string.IsNullOrEmpty(comment.MediaUrl))
+                                {
+                                    <div class="mb-3">
+                                        <img src="@comment.MediaUrl" class="max-w-xs rounded-lg border border-zinc-200 dark:border-white/10" />
+                                    </div>
+                                }
+                                <div class="flex items-center gap-4">
+                                    <button @onclick="() => AgreeComment(comment.Id)" class="flex items-center gap-1 text-xs text-zinc-500 hover:text-blue-600 transition">
+                                        <span class="text-zinc-400">Agree</span>
+                                        <span class="font-medium">(@comment.AgreeCount)</span>
+                                    </button>
+                                    <AuthorizeView>
+                                        <Authorized Context="context">
+                                            @if (context.User.Identity?.Name == comment.UserId)
+                                            {
+                                                <button @onclick="() => DeleteComment(comment.Id)" class="text-xs text-zinc-500 hover:text-red-600 transition">Delete</button>
+                                            }
+                                        </Authorized>
+                                    </AuthorizeView>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public string? Id { get; set; }
+    [Parameter] public string? VnId { get; set; }
+    private Anidex.Services.MediaDetails? _details;
+    private List<Anidex.Models.Comment>? _comments;
+    private string _newCommentContent = "";
+    private string? _uploadedMediaUrl;
+    private string? _errorMessage;
+    private string? MediaId => !string.IsNullOrWhiteSpace(Id)
+        ? Id
+        : !string.IsNullOrWhiteSpace(VnId) ? $"vndb:{VnId}" : null;
+    private bool IsVisualNovel => _details?.Source == "VNDB";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _errorMessage = null;
+        try
+        {
+            if (MediaId == null)
+            {
+                _errorMessage = "No media item was specified.";
+                return;
+            }
+
+            _details = await MediaService.GetMediaDetailsAsync(MediaId);
+            await LoadComments();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading details: {ex.Message}");
+            _errorMessage = "We encountered a problem fetching the media details. This might be due to API rate limits or an invalid ID.";
+        }
+    }
+
+    private async Task LoadComments()
+    {
+        if (MediaId != null)
+        {
+            _comments = await CommentService.GetCommentsAsync(MediaId);
+        }
+    }
+
+    private async Task HandleFileUpload(ChangeEventArgs e)
+    {
+        // Simulating upload
+        _uploadedMediaUrl = "https://cdn.example.com/upload-placeholder.jpg";
+    }
+
+    private async Task PostComment()
+    {
+        if (string.IsNullOrWhiteSpace(_newCommentContent)) return;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? user.Identity?.Name ?? "unknown";
+        var userName = user.Identity?.Name ?? "Anonymous";
+
+        var comment = new Anidex.Models.Comment
+        {
+            UserId = userId,
+            UserName = userName,
+            MediaId = MediaId ?? string.Empty,
+            Content = _newCommentContent,
+            MediaUrl = _uploadedMediaUrl
+        };
+
+        await CommentService.AddCommentAsync(comment);
+        _newCommentContent = "";
+        _uploadedMediaUrl = null;
+        await LoadComments();
+    }
+
+    private async Task AgreeComment(Guid id)
+    {
+        await CommentService.IncrementAgreeCountAsync(id);
+        await LoadComments();
+    }
+
+    private async Task DeleteComment(Guid id)
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? authState.User.Identity?.Name ?? "unknown";
+        await CommentService.DeleteCommentAsync(id, userId);
+        await LoadComments();
+    }
+
+    private static string FormatPlayTime(int minutes)
+    {
+        var duration = TimeSpan.FromMinutes(minutes);
+        return duration.TotalHours >= 1
+            ? $"{(int)duration.TotalHours}h {duration.Minutes}m"
+            : $"{duration.Minutes}m";
+    }
+}

@@ -1,0 +1,67 @@
+@page "/search"
+@using Anidex.Components.Shared
+@inject Anidex.Services.MediaService MediaService
+@inject NavigationManager Navigation
+
+<PageTitle>Search - Anidex</PageTitle>
+
+<div class="mx-auto max-w-7xl px-6 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-zinc-900 dark:text-white">Search Results</h1>
+        <p class="text-zinc-500 dark:text-zinc-400 mt-2">Showing results for "@_query"</p>
+    </div>
+
+    @if (_results == null)
+    {
+        <div class="flex items-center justify-center py-12">
+            <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+            <span class="ml-3 text-zinc-400">Searching media sources...</span>
+        </div>
+    }
+    else if (!_results.Any())
+    {
+        <div class="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 px-6 py-12 text-center text-zinc-400">
+            No results found for "@_query". Try another keyword.
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            @foreach (var item in _results)
+            {
+                <div class="flex justify-center">
+                    <MediaCard Item="item" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? q { get; set; }
+
+    private string _query = string.Empty;
+    private List<Anidex.Models.Media>? _results;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _query = q ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_query))
+        {
+            Navigation.NavigateTo("/");
+            return;
+        }
+
+        try
+        {
+            _results = await MediaService.SearchMediaAsync(_query);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Search error: {ex.Message}");
+            _results = new List<Anidex.Models.Media>();
+        }
+    }
+}

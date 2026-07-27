@@ -51,14 +51,17 @@ namespace Anidex
             builder.Services.AddHttpClient<MalService>(client =>
             {
                 client.BaseAddress = new Uri("https://api.jikan.moe/v4/");
+                client.DefaultRequestHeaders.Add("User-Agent", "Anidex-App/1.0");
             });
 
             builder.Services.AddHttpClient<VNDBService>(client => {
                 client.BaseAddress = new Uri("https://api.vndb.org/kana/");
+                client.DefaultRequestHeaders.Add("User-Agent", "Anidex-App/1.0");
             });
 
             builder.Services.AddScoped<MediaService>();
             builder.Services.AddScoped<ThemeService>();
+            builder.Services.AddScoped<CommentService>();
 
             var app = builder.Build();
 

@@ -7,6 +7,8 @@ public class ThemeService
     private readonly IJSRuntime _jsRuntime;
     public bool IsDarkMode { get; private set; } = true;
 
+    public event Func<Task>? OnThemeChanged;
+
     public ThemeService(IJSRuntime jsRuntime)
     {
         _jsRuntime = jsRuntime;
@@ -16,6 +18,7 @@ public class ThemeService
     {
         IsDarkMode = !IsDarkMode;
         await ApplyThemeAsync();
+        await NotifyThemeChanged();
     }
 
     public async Task ApplyThemeAsync()
@@ -32,5 +35,13 @@ public class ThemeService
             IsDarkMode = savedTheme == "dark";
         }
         await ApplyThemeAsync();
+    }
+
+    private async Task NotifyThemeChanged()
+    {
+        if (OnThemeChanged != null)
+        {
+            await OnThemeChanged.Invoke();
+        }
     }
 }

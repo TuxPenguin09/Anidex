@@ -1,0 +1,54 @@
+@page "/visual-novels"
+@using Anidex.Components.Shared
+@inject Anidex.Services.MediaService MediaService
+
+<PageTitle>Visual Novels - Anidex</PageTitle>
+
+<div class="mx-auto max-w-7xl px-6 py-8">
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-zinc-900 dark:text-white">Latest Visual Novels</h1>
+        <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Recently released visual novels, powered by VNDB.</p>
+    </div>
+
+    @if (_recommendedVNs == null)
+    {
+        <div class="flex items-center justify-center py-12">
+            <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+            <span class="ml-3 text-zinc-400">Loading visual novels...</span>
+        </div>
+    }
+    else if (!_recommendedVNs.Any())
+    {
+        <div class="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 px-6 py-12 text-center text-zinc-400">
+            No recently released visual novels found.
+        </div>
+    }
+    else
+    {
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            @foreach (var vn in _recommendedVNs)
+            {
+                <div class="flex justify-center">
+                    <MediaCard Item="vn" />
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Anidex.Models.Media>? _recommendedVNs;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _recommendedVNs = await MediaService.GetRecommendedVisualNovelsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            _recommendedVNs = new List<Anidex.Models.Media>();
+        }
+    }
+}
