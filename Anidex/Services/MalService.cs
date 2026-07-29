@@ -26,6 +26,13 @@ public class MalService
         foreach (var item in document.RootElement.GetProperty("data").EnumerateArray())
         {
             var entry = item.GetProperty("entry")[0];
+            
+            // Check rating - skip Rx (Hentai/Adult) content
+            if (IsAdultContent(entry))
+            {
+                continue;
+            }
+
             var coverImage = GetCoverImageUrl(entry);
 
             media.Add(new Media
@@ -34,6 +41,7 @@ public class MalService
                 Source = "MAL",
                 Title = entry.GetProperty("title").GetString() ?? string.Empty,
                 CoverImage = coverImage,
+                IsAdult = false
             });
         }
 
@@ -51,6 +59,12 @@ public class MalService
         var media = new List<Media>();
         foreach (var item in document.RootElement.GetProperty("data").EnumerateArray())
         {
+            // Check rating - skip Rx (Hentai/Adult) content
+            if (IsAdultContent(item))
+            {
+                continue;
+            }
+
             var coverImage = GetCoverImageUrl(item);
             media.Add(new Media
             {
@@ -58,6 +72,7 @@ public class MalService
                 Source = "MAL",
                 Title = item.GetProperty("title").GetString() ?? string.Empty,
                 CoverImage = coverImage,
+                IsAdult = false
             });
         }
         return media;
@@ -80,6 +95,12 @@ public class MalService
             using var stream = await response.Content.ReadAsStreamAsync();
             using var document = await JsonDocument.ParseAsync(stream);
             var data = document.RootElement.GetProperty("data");
+
+            // Check rating for adult content
+            if (IsAdultContent(data))
+            {
+                throw new NotAllowedException("Not allowed to view this content. Adult content (Rx/Hentai) is restricted.");
+            }
 
             var title = data.GetProperty("title").GetString() ?? "Unknown";
             var synopsis = data.TryGetProperty("synopsis", out var synopsisElement) && synopsisElement.ValueKind != JsonValueKind.Null
@@ -120,14 +141,52 @@ public class MalService
                 Title = title,
                 Description = synopsis,
                 Characters = characters,
-                CoverImage = coverImage
+                CoverImage = coverImage,
+                IsAdult = false
             };
+        }
+        catch (NotAllowedException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error fetching anime details: {ex.Message}");
             throw; // Re-throw so the UI can handle it
         }
+    }
+
+    private static bool IsAdultContent(JsonElement entry)
+    {
+        // Check the rating field for Rx (Hentai/Adult content)
+        // MAL ratings: G, PG, PG-13, R (17+), R+ (Mild Nudity), Rx (Hentai/Adult)
+        if (entry.TryGetProperty("rating", out var ratingElement) && ratingElement.ValueKind == JsonValueKind.String)
+        {
+            var rating = ratingElement.GetString() ?? string.Empty;
+            // Rx is the hentai/adult rating
+            if (rating.Equals("Rx", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        // Check explicit_genres for Hentai content (more reliable according to API docs)
+        // Hentai has mal_id = 12 in the genres list
+        if (entry.TryGetProperty("explicit_genres", out var explicitGenresElement) &&
+            explicitGenresElement.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var genre in explicitGenresElement.EnumerateArray())
+            {
+                if (genre.TryGetProperty("mal_id", out var malIdElement) &&
+                    malIdElement.ValueKind == JsonValueKind.Number &&
+                    malIdElement.GetInt32() == 12) // Hentai genre ID
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private static string? GetCoverImageUrl(JsonElement entry)

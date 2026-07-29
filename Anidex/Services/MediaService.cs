@@ -15,12 +15,16 @@ public class MediaService
 
     public async Task<List<Media>> GetRecommendedAnimeAsync()
     {
-        return await _malService.GetRecommendedAnimeAsync();
+        return (await _malService.GetRecommendedAnimeAsync())
+            .Where(media => !media.IsAdult)
+            .ToList();
     }
 
     public async Task<List<Media>> GetRecommendedVisualNovelsAsync()
     {
-        return await _vndbService.GetRecommendedVisualNovelsAsync();
+        return (await _vndbService.GetRecommendedVisualNovelsAsync())
+            .Where(media => !media.IsAdult)
+            .ToList();
     }
 
     public async Task<List<Media>> SearchMediaAsync(string query)
@@ -30,18 +34,35 @@ public class MediaService
 
         var results = await Task.WhenAll(animeTask, vnTask);
 
-        return results[0].Concat(results[1]).ToList();
+        return results[0]
+            .Concat(results[1])
+            .Where(media => !media.IsAdult)
+            .ToList();
     }
 
     public async Task<MediaDetails> GetMediaDetailsAsync(string id)
     {
         if (id.StartsWith("mal:"))
         {
-            return await _malService.GetAnimeDetailsAsync(id);
+            try
+            {
+                return await _malService.GetAnimeDetailsAsync(id);
+            }
+            catch (NotAllowedException)
+            {
+                throw;
+            }
         }
         if (id.StartsWith("vndb:"))
         {
-            return await _vndbService.GetVNDetailsAsync(id);
+            try
+            {
+                return await _vndbService.GetVNDetailsAsync(id);
+            }
+            catch (NotAllowedException)
+            {
+                throw;
+            }
         }
 
         throw new ArgumentException("Invalid media ID format. Must start with 'mal:' or 'vndb:'.");

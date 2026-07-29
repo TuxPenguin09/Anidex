@@ -10,6 +10,8 @@ public class VNDBService
     private readonly HttpClient _httpClient;
     private readonly ILogger<VNDBService> _logger;
 
+    private const int MaxAllowedMinAge = 17;
+
     public VNDBService(HttpClient httpClient, ILogger<VNDBService> logger)
     {
         _httpClient = httpClient;
@@ -17,137 +19,213 @@ public class VNDBService
     }
 
     public async Task<List<Media>> GetRecommendedVisualNovelsAsync()
-    {
-        try
         {
-            // Kana does not expose an "updated" sort for VNs. Released is the closest
-            // supported signal for a current recommendations feed.
-            var requestBody = new
+            try
             {
-                filters = new object[]
+                // Kana does not expose an "updated" sort for VNs. Released is the closest
+                // supported signal for a current recommendations feed.
+                var requestBody = new
                 {
-                    "and",
-                    new object[] { "released", "<=", DateTime.UtcNow.ToString("yyyy-MM-dd") },
-                    new object[] { "has_description", "=", 1 }
-                },
-                fields = "title,description,released,image.url,image.thumbnail,rating,votecount",
-                sort = "released",
-                reverse = true,
-                results = 20
-            };
-
-            var response = await PostApiRequestAsync("vn", requestBody);
-
-            var media = new List<Media>();
-            if (response.TryGetProperty("results", out var results))
-            {
-                foreach (var vn in results.EnumerateArray())
-                {
-                    media.Add(ParseVisualNovel(vn));
-                }
-            }
-
-            return media;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unable to fetch recently released visual novels from VNDB");
-            return new List<Media>();
-        }
-    }
-
-    public async Task<List<Media>> SearchVNAsync(string query)
-    {
-        try
-        {
-            var requestBody = new
-            {
-                filters = new object[] { "search", "=", query },
-                fields = "title,description,released,image.url,image.thumbnail,rating,votecount",
-                sort = "searchrank",
-                results = 10
-            };
-
-            var response = await PostApiRequestAsync("vn", requestBody);
-
-            var media = new List<Media>();
-            if (response.TryGetProperty("results", out var results))
-            {
-                foreach (var vn in results.EnumerateArray())
-                {
-                    media.Add(ParseVisualNovel(vn));
-                }
-            }
-
-            return media;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unable to search VNDB for {Query}", query);
-            return new List<Media>();
-        }
-    }
-
-    public async Task<MediaDetails> GetVNDetailsAsync(string id)
-    {
-        try
-        {
-            // Extract VNID from format "vndb:v12345"
-            var vnId = id.StartsWith("vndb:", StringComparison.OrdinalIgnoreCase)
-                ? id["vndb:".Length..]
-                : id;
-
-            if (string.IsNullOrWhiteSpace(vnId))
-            {
-                throw new ArgumentException("A VNDB visual novel ID is required.", nameof(id));
-            }
-
-            var requestBody = new
-            {
-                filters = new object[] { "id", "=", vnId },
-                fields = "title,alttitle,description,released,image.url,image.thumbnail,rating,average,votecount,length_minutes,languages,platforms,developers.name,tags.name,tags.rating,tags.spoiler"
-            };
-
-            var response = await PostApiRequestAsync("vn", requestBody);
-
-            if (response.TryGetProperty("results", out var results) && results.GetArrayLength() > 0)
-            {
-                var vn = results[0];
-                var title = vn.TryGetProperty("title", out var titleEl) ? titleEl.GetString() ?? "Unknown" : "Unknown";
-                var description = vn.TryGetProperty("description", out var descEl) && descEl.ValueKind != JsonValueKind.Null
-                    ? descEl.GetString() ?? "No description available."
-                    : "No description available.";
-
-                var characters = await GetCharacterNamesAsync(vnId);
-
-                return new MediaDetails
-                {
-                    Title = title,
-                    Description = description,
-                    Characters = characters,
-                    CoverImage = GetImageUrl(vn),
-                    AlternativeTitle = GetString(vn, "alttitle"),
-                    Score = GetScore(vn, "rating"),
-                    VoteCount = GetInt32(vn, "votecount"),
-                    Released = GetString(vn, "released"),
-                    LengthMinutes = GetInt32(vn, "length_minutes"),
-                    Languages = GetStringValues(vn, "languages"),
-                    Platforms = GetStringValues(vn, "platforms"),
-                    Developers = GetObjectNames(vn, "developers"),
-                    Tags = GetTagNames(vn),
-                    Source = "VNDB",
-                    ExternalUrl = $"https://vndb.org/{vnId}"
+                    filters = new object[]
+                    {
+                        "and",
+                        new object[] { "released", "<=", DateTime.UtcNow.ToString("yyyy-MM-dd") },
+                        new object[] { "has_description", "=", 1 },
+                    },
+                    fields = "title,description,released,image.url,image.thumbnail,rating,votecount,tags.name",
+                    sort = "released",
+                    reverse = true,
+                    results = 20
                 };
+
+                var response = await PostApiRequestAsync("vn", requestBody);
+
+                var media = new List<Media>();
+                if (response.TryGetProperty("results", out var results))
+                {
+                    foreach (var vn in results.EnumerateArray())
+                    {
+                        // Filter out 18+ content
+                        if (IsAdultContent(vn))
+                        {
+                            continue;
+                        }
+                        media.Add(ParseVisualNovel(vn));
+                    }
+                }
+
+                return media;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to fetch recently released visual novels from VNDB");
+                return new List<Media>();
+            }
+        }
+
+        public async Task<List<Media>> SearchVNAsync(string query)
+        {
+            try
+            {
+                var requestBody = new
+                {
+                        filters = new object[]
+                        {
+                            "and",
+                            new object[] { "search", "=", query },
+                            new object[] { "minage", "<=", MaxAllowedMinAge }
+                        },
+                    fields = "title,description,released,image.url,image.thumbnail,rating,votecount,tags.name",
+                    sort = "searchrank",
+                    results = 10
+                };
+
+                var response = await PostApiRequestAsync("vn", requestBody);
+
+                var media = new List<Media>();
+                if (response.TryGetProperty("results", out var results))
+                {
+                    foreach (var vn in results.EnumerateArray())
+                    {
+                        // Filter out 18+ content
+                        if (IsAdultContent(vn))
+                        {
+                            continue;
+                        }
+                        media.Add(ParseVisualNovel(vn));
+                    }
+                }
+
+                return media;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to search VNDB for {Query}", query);
+                return new List<Media>();
+            }
+        }
+
+        public async Task<MediaDetails> GetVNDetailsAsync(string id)
+        {
+            try
+            {
+                // Extract VNID from format "vndb:v12345"
+                var vnId = id.StartsWith("vndb:", StringComparison.OrdinalIgnoreCase)
+                    ? id["vndb:".Length..]
+                    : id;
+
+                if (string.IsNullOrWhiteSpace(vnId))
+                {
+                    throw new ArgumentException("A VNDB visual novel ID is required.", nameof(id));
+                }
+
+                var requestBody = new
+                {
+                    filters = new object[] { "id", "=", vnId },
+                    fields = "title,alttitle,description,released,image.url,image.thumbnail,rating,average,votecount,length_minutes,languages,platforms,developers.name,tags.name,tags.rating,tags.spoiler"
+                };
+
+                var response = await PostApiRequestAsync("vn", requestBody);
+
+                if (response.TryGetProperty("results", out var results) && results.GetArrayLength() > 0)
+                {
+                    var vn = results[0];
+                
+                    // Check for adult content
+                    if (IsAdultContent(vn))
+                    {
+                        throw new NotAllowedException("Not allowed to view this content. Adult content (18+) is restricted.");
+                    }
+
+                    var title = vn.TryGetProperty("title", out var titleEl) ? titleEl.GetString() ?? "Unknown" : "Unknown";
+                    var description = vn.TryGetProperty("description", out var descEl) && descEl.ValueKind != JsonValueKind.Null
+                        ? descEl.GetString() ?? "No description available."
+                        : "No description available.";
+
+                    var characters = await GetCharacterNamesAsync(vnId);
+
+                    return new MediaDetails
+                    {
+                        Title = title,
+                        Description = description,
+                        Characters = characters,
+                        CoverImage = GetImageUrl(vn),
+                        AlternativeTitle = GetString(vn, "alttitle"),
+                        Score = GetScore(vn, "rating"),
+                        VoteCount = GetInt32(vn, "votecount"),
+                        Released = GetString(vn, "released"),
+                        LengthMinutes = GetInt32(vn, "length_minutes"),
+                        Languages = GetStringValues(vn, "languages"),
+                        Platforms = GetStringValues(vn, "platforms"),
+                        Developers = GetObjectNames(vn, "developers"),
+                        Tags = GetTagNames(vn),
+                        Source = "VNDB",
+                        ExternalUrl = $"https://vndb.org/{vnId}",
+                        IsAdult = false
+                    };
+                }
+
+                throw new Exception($"VN with ID {vnId} not found.");
+            }
+            catch (NotAllowedException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unable to fetch VNDB details for {VnId}", id);
+                throw;
+            }
+        }
+
+        private static bool IsAdultContent(JsonElement vn)
+        {
+            if (vn.TryGetProperty("minage", out var minageElement) &&
+                minageElement.ValueKind == JsonValueKind.Number &&
+                minageElement.TryGetInt32(out var minage) &&
+                minage >= 18)
+            {
+                return true;
             }
 
-            throw new Exception($"VN with ID {vnId} not found.");
+            return HasRestrictedTags(vn);
         }
-        catch (Exception ex)
+
+        private static bool HasRestrictedTags(JsonElement vn)
         {
-            _logger.LogError(ex, "Unable to fetch VNDB details for {VnId}", id);
-            throw;
+            if (!vn.TryGetProperty("tags", out var tagsElement) || tagsElement.ValueKind != JsonValueKind.Array)
+            {
+                return false;
+            }
+
+            foreach (var tag in tagsElement.EnumerateArray())
+            {
+                if (!tag.TryGetProperty("name", out var nameElement) || nameElement.ValueKind != JsonValueKind.String)
+                {
+                    continue;
+                }
+
+                var tagName = nameElement.GetString()?.Trim().ToLowerInvariant() ?? string.Empty;
+
+                if (tagName.Contains("18+") ||
+                    tagName.Contains("adult") ||
+                    tagName.Contains("eroge") ||
+                    tagName.Contains("hentai") ||
+                    tagName.Contains("nukige") ||
+                    tagName.Contains("sexual content") ||
+                    tagName.Contains("incest") ||
+                    tagName.Contains("shota") ||
+                    tagName.Contains("loli") ||
+                    tagName.Contains("rape") ||
+                    tagName.Contains("molest") ||
+                    tagName.Contains("bestiality"))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
-    }
 
     private async Task<List<string>> GetCharacterNamesAsync(string vnId)
     {
@@ -313,4 +391,5 @@ public class MediaDetails
     public List<string> Tags { get; set; } = new();
     public string? Source { get; set; }
     public string? ExternalUrl { get; set; }
+    public bool IsAdult { get; set; } = false;
 }

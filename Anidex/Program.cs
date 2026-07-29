@@ -4,6 +4,7 @@ using Anidex.Data;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Polly;
 
 using Anidex.Services;
 
@@ -52,12 +53,14 @@ namespace Anidex
             {
                 client.BaseAddress = new Uri("https://api.jikan.moe/v4/");
                 client.DefaultRequestHeaders.Add("User-Agent", "Anidex-App/1.0");
-            });
+            })
+            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10)));
 
             builder.Services.AddHttpClient<VNDBService>(client => {
                 client.BaseAddress = new Uri("https://api.vndb.org/kana/");
                 client.DefaultRequestHeaders.Add("User-Agent", "Anidex-App/1.0");
-            });
+            })
+            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10)));
 
             builder.Services.AddScoped<MediaService>();
             builder.Services.AddScoped<ThemeService>();

@@ -9,4 +9,5 @@ public class Media
     public string? CoverImage { get; set; }
     public double? Score { get; set; }
     public string? Released { get; set; }
+    public bool IsAdult { get; set; } = false;
 }

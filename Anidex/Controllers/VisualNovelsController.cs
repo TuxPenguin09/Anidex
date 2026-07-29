@@ -4,27 +4,25 @@ using Anidex.Services;
 namespace Anidex.Controllers;
 
 [ApiController]
-[Route("anime")]
-public class AnimeController : ControllerBase
+[Route("visual-novels")]
+public class VisualNovelsController : ControllerBase
 {
     private readonly MediaService _mediaService;
 
-    public AnimeController(MediaService mediaService)
+    public VisualNovelsController(MediaService mediaService)
     {
         _mediaService = mediaService;
     }
 
     [HttpGet("recommended")]
-    public async Task<IActionResult> GetRecommendedAnime()
+    public async Task<IActionResult> GetRecommendedVisualNovels()
     {
-        // Implement logic to get recommended anime using _mediaService
-        var result = await _mediaService.GetRecommendedAnimeAsync();
-
+        var result = await _mediaService.GetRecommendedVisualNovelsAsync();
         return Ok(result);
     }
 
     [HttpGet("search")]
-    public async Task<IActionResult> SearchAnime([FromQuery] string q)
+    public async Task<IActionResult> SearchVisualNovels([FromQuery] string q)
     {
         if (string.IsNullOrWhiteSpace(q))
         {
@@ -33,18 +31,18 @@ public class AnimeController : ControllerBase
 
         var result = await _mediaService.SearchMediaAsync(q);
         
-        // Filter to only MAL results
-        var animeResults = result.Where(m => m.Source == "MAL").ToList();
+        // Filter to only VNDB results
+        var vnResults = result.Where(m => m.Source == "VNDB").ToList();
 
-        return Ok(animeResults);
+        return Ok(vnResults);
     }
 
     [HttpGet("details/{id}")]
-    public async Task<IActionResult> GetAnimeDetails(string id)
+    public async Task<IActionResult> GetVNDetails(string id)
     {
-        if (!id.StartsWith("mal:"))
+        if (!id.StartsWith("vndb:"))
         {
-            id = $"mal:{id}";
+            id = $"vndb:{id}";
         }
 
         try
