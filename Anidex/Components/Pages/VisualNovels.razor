@@ -1,54 +1,34 @@
 @page "/visual-novels"
-@using Anidex.Components.Shared
-@inject Anidex.Services.MediaService MediaService
 
-<PageTitle>Visual Novels - Anidex</PageTitle>
+<PageTitle>Visual Novels - Disabled</PageTitle>
 
-<div class="mx-auto max-w-7xl px-6 py-8">
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-zinc-900 dark:text-white">Latest Visual Novels</h1>
-        <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Recently released visual novels, powered by VNDB.</p>
+<div class="mx-auto max-w-7xl px-6 py-16 text-center">
+    <div class="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-6 mb-8">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <!-- Warning Icon -->
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-lg font-medium text-yellow-800 dark:text-yellow-200">Visual Novel Recommendations Disabled</h3>
+                <p class="mt-1 text-sm text-yellow-700 dark:text-yellow-300">
+                    The Visual Novel recommendation feature has been disabled to prevent accidental exposure to inappropriate content in educational settings.
+                </p>
+                <p class="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
+                    You can still search for specific visual novels or access them directly if you know their ID.
+                </p>
+            </div>
+        </div>
     </div>
 
-    @if (_recommendedVNs == null)
-    {
-        <div class="flex items-center justify-center py-12">
-            <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-            <span class="ml-3 text-zinc-400">Loading visual novels...</span>
-        </div>
-    }
-    else if (!_recommendedVNs.Any())
-    {
-        <div class="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 px-6 py-12 text-center text-zinc-400">
-            No recently released visual novels found.
-        </div>
-    }
-    else
-    {
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            @foreach (var vn in _recommendedVNs)
-            {
-                <div class="flex justify-center">
-                    <MediaCard Item="vn" />
-                </div>
-            }
-        </div>
-    }
+    <div class="space-y-4">
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            For educational use, please use the search functionality to find specific visual novels by title.
+        </p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+            Example: <code>/visual-novels/search?q=your search term</code>
+        </p>
+    </div>
 </div>
-
-@code {
-    private List<Anidex.Models.Media>? _recommendedVNs;
-
-    protected override async Task OnInitializedAsync()
-    {
-        try
-        {
-            _recommendedVNs = await MediaService.GetRecommendedVisualNovelsAsync();
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: {ex.Message}");
-            _recommendedVNs = new List<Anidex.Models.Media>();
-        }
-    }
-}

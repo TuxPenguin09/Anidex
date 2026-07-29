@@ -14,13 +14,6 @@ public class VisualNovelsController : ControllerBase
         _mediaService = mediaService;
     }
 
-    [HttpGet("recommended")]
-    public async Task<IActionResult> GetRecommendedVisualNovels()
-    {
-        var result = await _mediaService.GetRecommendedVisualNovelsAsync();
-        return Ok(result);
-    }
-
     [HttpGet("search")]
     public async Task<IActionResult> SearchVisualNovels([FromQuery] string q)
     {
@@ -30,7 +23,7 @@ public class VisualNovelsController : ControllerBase
         }
 
         var result = await _mediaService.SearchMediaAsync(q);
-        
+
         // Filter to only VNDB results
         var vnResults = result.Where(m => m.Source == "VNDB").ToList();
 

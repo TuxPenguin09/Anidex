@@ -20,11 +20,11 @@ public class MediaService
             .ToList();
     }
 
+    // Visual Novel recommendations have been disabled to prevent accidental exposure to adult content
     public async Task<List<Media>> GetRecommendedVisualNovelsAsync()
     {
-        return (await _vndbService.GetRecommendedVisualNovelsAsync())
-            .Where(media => !media.IsAdult)
-            .ToList();
+        // Return empty list to disable VN recommendations
+        return new List<Media>();
     }
 
     public async Task<List<Media>> SearchMediaAsync(string query)
