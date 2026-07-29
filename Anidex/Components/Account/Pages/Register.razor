@@ -15,51 +15,73 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 
-<PageTitle>Join</PageTitle>
+<PageTitle>Join - Anidex</PageTitle>
 
-<div class="mx-auto max-w-7xl px-6 py-8">
-    <div class="mx-auto grid max-w-5xl gap-6 lg:grid-cols-[2fr_1fr]">
-        <section class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
-            <h1 class="text-3xl font-bold text-zinc-900 dark:text-white">Join</h1>
-            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Create your account to get started.</p>
+<div class="mx-auto flex min-h-[80vh] max-w-7xl items-center justify-center px-4 py-8">
+    <div class="w-full max-w-md space-y-6">
 
+        <!-- Header Section -->
+        <div class="text-center">
+            <h1 class="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">Create an Account</h1>
+            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Join Anidex to track and explore anime</p>
+        </div>
+
+        <section class="rounded-2xl border border-zinc-200 bg-white p-8 shadow-xl dark:border-white/10 dark:bg-zinc-900/90 backdrop-blur-md">
             <StatusMessage Message="@Message" />
 
-            <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register" class="mt-6 space-y-4">
+            <EditForm Model="Input" method="post" OnValidSubmit="RegisterUser" FormName="register" class="space-y-4">
                 <DataAnnotationsValidator />
-                <ValidationSummary class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300" role="alert" />
 
                 <div>
-                    <label for="Input.Email" class="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Email</label>
-                    <InputText @bind-Value="Input.Email" id="Input.Email" class="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                    <ValidationMessage For="() => Input.Email" class="mt-1 block text-sm text-red-500" />
+                    <label for="Input.Email" class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Email Address</label>
+                    <InputText @bind-Value="Input.Email" id="Input.Email"
+                               class="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:bg-zinc-900"
+                               autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                    <ValidationMessage For="() => Input.Email" class="mt-1 block text-xs text-red-500" />
                 </div>
 
                 <div>
-                    <label for="Input.Password" class="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Password</label>
-                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" autocomplete="new-password" aria-required="true" placeholder="Password" />
-                    <ValidationMessage For="() => Input.Password" class="mt-1 block text-sm text-red-500" />
+                    <label for="Input.Password" class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Password</label>
+                    <InputText type="password" @bind-Value="Input.Password" id="Input.Password"
+                               class="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:bg-zinc-900"
+                               autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                    <ValidationMessage For="() => Input.Password" class="mt-1 block text-xs text-red-500" />
                 </div>
 
                 <div>
-                    <label for="Input.ConfirmPassword" class="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">Confirm Password</label>
-                    <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword" class="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-950 dark:text-white" autocomplete="new-password" aria-required="true" placeholder="Confirm password" />
-                    <ValidationMessage For="() => Input.ConfirmPassword" class="mt-1 block text-sm text-red-500" />
+                    <label for="Input.ConfirmPassword" class="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Confirm Password</label>
+                    <InputText type="password" @bind-Value="Input.ConfirmPassword" id="Input.ConfirmPassword"
+                               class="w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white dark:focus:bg-zinc-900"
+                               autocomplete="new-password" aria-required="true" placeholder="••••••••" />
+                    <ValidationMessage For="() => Input.ConfirmPassword" class="mt-1 block text-xs text-red-500" />
                 </div>
 
-                <button type="submit" class="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/30">
-                    Join
+                <button type="submit" class="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-md transition hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98]">
+                    Join Anidex
                 </button>
             </EditForm>
-        </section>
 
-        <section class="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-zinc-900">
-            <h2 class="text-lg font-semibold text-zinc-900 dark:text-white">Use another service</h2>
-            <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Create your account with an external provider.</p>
-            <div class="mt-4">
+            <!-- External Login / OAuth Section -->
+            <div class="relative my-6">
+                <div class="absolute inset-0 flex items-center">
+                    <div class="w-full border-t border-zinc-200 dark:border-white/10"></div>
+                </div>
+                <div class="relative flex justify-center text-xs uppercase">
+                    <span class="bg-white px-2 text-zinc-400 dark:bg-zinc-900">Or join with</span>
+                </div>
+            </div>
+
+            <div>
                 <ExternalLoginPicker />
             </div>
+
+            <!-- Footer Link -->
+            <div class="mt-6 border-t border-zinc-100 pt-4 text-center text-xs text-zinc-500 dark:border-white/5 dark:text-zinc-400">
+                Already have an account?
+                <a href="@(NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?> { ["ReturnUrl"] = ReturnUrl }))" class="font-semibold text-blue-600 hover:underline dark:text-blue-400">Sign in</a>
+            </div>
         </section>
+
     </div>
 </div>
 

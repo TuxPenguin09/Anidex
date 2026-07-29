@@ -7,136 +7,158 @@
 
 <PageTitle>@(_details?.Title ?? "Loading...") - Anidex</PageTitle>
 
-<div class="mx-auto max-w-5xl px-6 py-8">
+<div class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+
     @if (_errorMessage != null)
     {
-        <div class="mx-auto max-w-2xl rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/30 p-4 text-center text-red-600 dark:text-red-400 my-12">
-            <div class="flex flex-col items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p class="font-medium">@_errorMessage</p>
+        <div class="mx-auto max-w-2xl rounded-2xl bg-red-500/10 border border-red-500/20 p-6 text-center my-12 shadow-xl backdrop-blur-md">
+            <div class="flex flex-col items-center gap-3">
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 text-red-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <p class="font-semibold text-red-600 dark:text-red-400">@_errorMessage</p>
                 @if (_isAdultContentError)
                 {
-                    <p class="text-sm text-red-500 dark:text-red-300">This content is restricted to users 18+. Comments are disabled for this content.</p>
+                    <p class="text-xs text-red-500/80">This content is restricted to users 18+. Comments are disabled for this content.</p>
                 }
-                <button @onclick="() => OnParametersSetAsync()" class="text-xs underline hover:no-underline">Try again</button>
+                <button @onclick="() => OnParametersSetAsync()" class="mt-2 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 hover:underline">
+                    Try again
+                </button>
             </div>
         </div>
     }
     else if (_details == null)
     {
-        <div class="flex items-center justify-center py-24">
-            <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-            <span class="ml-3 text-zinc-400">Fetching media details...</span>
+        <div class="flex flex-col items-center justify-center py-32 space-y-4">
+            <div class="h-10 w-10 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+            <span class="text-sm font-medium text-zinc-400">Fetching media details...</span>
         </div>
     }
     else
     {
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="flex flex-col items-center">
-                <div class="overflow-hidden rounded-2xl bg-zinc-200 dark:bg-zinc-800 shadow-xl" style="width: 300px; aspect-ratio: 3 / 4;">
+        <!-- Main Media Overview Card -->
+        <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start rounded-3xl border border-zinc-200 bg-white p-6 sm:p-8 shadow-xl dark:border-white/10 dark:bg-zinc-900/90 backdrop-blur-md">
+
+            <!-- Poster Column -->
+            <div class="md:col-span-4 flex flex-col items-center">
+                <div class="relative overflow-hidden rounded-2xl bg-zinc-200 dark:bg-zinc-800 shadow-2xl w-full max-w-[280px] aspect-[3/4] group">
                     @if (!string.IsNullOrEmpty(_details.CoverImage))
                     {
-                        <img src="@_details.CoverImage" alt="@_details.Title" class="h-full w-full object-cover" />
+                        <img src="@_details.CoverImage" alt="@_details.Title" class="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
                     }
                     else
                     {
-                        <div class="flex h-full w-full items-center justify-center text-zinc-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <div class="flex h-full w-full items-center justify-center text-zinc-400 dark:text-zinc-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                         </div>
                     }
                 </div>
+
+                @if (!string.IsNullOrWhiteSpace(_details.ExternalUrl))
+                {
+                    <a href="@_details.ExternalUrl" target="_blank" rel="noreferrer" class="mt-6 inline-flex w-full max-w-[280px] items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50/50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-blue-600 transition hover:bg-blue-600 hover:text-white dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-600 dark:hover:text-white">
+                        <span>View on VNDB</span>
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </a>
+                }
             </div>
 
-            <div class="md:col-span-2">
-                <h1 class="text-4xl font-bold text-zinc-900 dark:text-white mb-2">@_details.Title</h1>
+            <!-- Details Column -->
+            <div class="md:col-span-8 space-y-6">
+                <div>
+                    <h1 tabindex="-1" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white outline-none focus:outline-none">
+                        @_details.Title
+                    </h1>
 
-                @if (!string.IsNullOrWhiteSpace(_details.AlternativeTitle))
-                {
-                    <p class="mb-5 text-lg text-zinc-500 dark:text-zinc-400">@_details.AlternativeTitle</p>
-                }
+                    @if (!string.IsNullOrWhiteSpace(_details.AlternativeTitle))
+                    {
+                        <p class="mt-1 text-base font-medium text-zinc-500 dark:text-zinc-400">@_details.AlternativeTitle</p>
+                    }
+                </div>
 
-                @if (IsVisualNovel)
-                {
-                    <div class="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        @if (_details.Score.HasValue)
-                        {
-                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-white/10 dark:bg-zinc-900/50">
-                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Rating</p>
-                                <p class="mt-1 text-lg font-bold text-yellow-600 dark:text-yellow-500">★ @_details.Score.Value.ToString("0.0")</p>
-                            </div>
-                        }
-                        @if (_details.VoteCount.HasValue)
-                        {
-                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-white/10 dark:bg-zinc-900/50">
-                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Votes</p>
-                                <p class="mt-1 text-lg font-bold text-zinc-900 dark:text-white">@_details.VoteCount.Value.ToString("N0")</p>
-                            </div>
-                        }
-                        @if (!string.IsNullOrWhiteSpace(_details.Released))
-                        {
-                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-white/10 dark:bg-zinc-900/50">
-                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Released</p>
-                                <p class="mt-1 text-lg font-bold text-zinc-900 dark:text-white">@_details.Released</p>
-                            </div>
-                        }
-                        @if (_details.LengthMinutes.HasValue)
-                        {
-                            <div class="rounded-xl border border-zinc-200 bg-zinc-50 p-3 dark:border-white/10 dark:bg-zinc-900/50">
-                                <p class="text-xs font-medium uppercase tracking-wide text-zinc-500">Play time</p>
-                                <p class="mt-1 text-lg font-bold text-zinc-900 dark:text-white">@FormatPlayTime(_details.LengthMinutes.Value)</p>
-                            </div>
-                        }
-                    </div>
-                }
+                <!-- Stats Grid -->
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    @if (_details.Score.HasValue)
+                    {
+                        <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 dark:border-white/10 dark:bg-zinc-950/50">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Score</p>
+                            <p class="mt-0.5 text-xl font-black text-amber-500 flex items-center gap-1">
+                                <span>★</span> @_details.Score.Value.ToString("0.0")
+                            </p>
+                        </div>
+                    }
+                    @if (_details.VoteCount.HasValue)
+                    {
+                        <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 dark:border-white/10 dark:bg-zinc-950/50">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Votes</p>
+                            <p class="mt-0.5 text-xl font-black text-zinc-900 dark:text-white">@_details.VoteCount.Value.ToString("N0")</p>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_details.Released))
+                    {
+                        <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 dark:border-white/10 dark:bg-zinc-950/50">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Released</p>
+                            <p class="mt-0.5 text-base font-bold text-zinc-900 dark:text-white truncate">@_details.Released</p>
+                        </div>
+                    }
+                    @if (_details.LengthMinutes.HasValue)
+                    {
+                        <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-3.5 dark:border-white/10 dark:bg-zinc-950/50">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-500">Play Time</p>
+                            <p class="mt-0.5 text-base font-bold text-zinc-900 dark:text-white">@FormatPlayTime(_details.LengthMinutes.Value)</p>
+                        </div>
+                    }
+                </div>
 
-                <div class="mb-8">
-                    <h2 class="text-lg font-semibold text-zinc-900 dark:text-white mb-2">Description</h2>
-                    <p class="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                <!-- Synopsis -->
+                <div>
+                    <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400 mb-2">Synopsis</h2>
+                    <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 whitespace-pre-line">
                         @_details.Description
                     </p>
                 </div>
 
+                <!-- VN Metadata Badges -->
                 @if (IsVisualNovel && (_details.Developers.Any() || _details.Languages.Any() || _details.Platforms.Any() || _details.Tags.Any()))
                 {
-                    <div class="mb-8 space-y-5">
+                    <div class="space-y-4 border-t border-zinc-100 pt-4 dark:border-white/5 text-xs">
                         @if (_details.Developers.Any())
                         {
                             <div>
-                                <h2 class="mb-2 text-lg font-semibold text-zinc-900 dark:text-white">Developers</h2>
-                                <p class="text-zinc-600 dark:text-zinc-400">@string.Join(", ", _details.Developers)</p>
+                                <span class="font-semibold uppercase tracking-wider text-zinc-500">Developers: </span>
+                                <span class="font-medium text-zinc-900 dark:text-white">@string.Join(", ", _details.Developers)</span>
                             </div>
                         }
-                        @if (_details.Languages.Any() || _details.Platforms.Any())
+                        @if (_details.Languages.Any())
                         {
-                            <div class="grid gap-4 sm:grid-cols-2">
-                                @if (_details.Languages.Any())
-                                {
-                                    <div>
-                                        <h2 class="mb-2 text-lg font-semibold text-zinc-900 dark:text-white">Languages</h2>
-                                        <p class="text-zinc-600 dark:text-zinc-400">@string.Join(", ", _details.Languages)</p>
-                                    </div>
-                                }
-                                @if (_details.Platforms.Any())
-                                {
-                                    <div>
-                                        <h2 class="mb-2 text-lg font-semibold text-zinc-900 dark:text-white">Platforms</h2>
-                                        <p class="text-zinc-600 dark:text-zinc-400">@string.Join(", ", _details.Platforms)</p>
-                                    </div>
-                                }
+                            <div>
+                                <span class="font-semibold uppercase tracking-wider text-zinc-500">Languages: </span>
+                                <span class="font-medium text-zinc-900 dark:text-white">@string.Join(", ", _details.Languages)</span>
+                            </div>
+                        }
+                        @if (_details.Platforms.Any())
+                        {
+                            <div>
+                                <span class="font-semibold uppercase tracking-wider text-zinc-500">Platforms: </span>
+                                <span class="font-medium text-zinc-900 dark:text-white">@string.Join(", ", _details.Platforms)</span>
                             </div>
                         }
                         @if (_details.Tags.Any())
                         {
-                            <div>
-                                <h2 class="mb-3 text-lg font-semibold text-zinc-900 dark:text-white">Tags</h2>
-                                <div class="flex flex-wrap gap-2">
+                            <div class="pt-2">
+                                <span class="block font-semibold uppercase tracking-wider text-zinc-500 mb-2">Tags</span>
+                                <div class="flex flex-wrap gap-1.5">
                                     @foreach (var tag in _details.Tags)
                                     {
-                                        <span class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm text-blue-700 dark:border-blue-400/20 dark:bg-blue-500/10 dark:text-blue-300">@tag</span>
+                                        <span class="rounded-lg border border-blue-200/50 bg-blue-50/50 px-2.5 py-1 text-xs text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
+                                            @tag
+                                        </span>
                                     }
                                 </div>
                             </div>
@@ -144,14 +166,15 @@
                     </div>
                 }
 
+                <!-- Characters Pills -->
                 @if (_details.Characters.Any())
                 {
-                    <div class="mb-8">
-                        <h2 class="mb-4 text-lg font-semibold text-zinc-900 dark:text-white">Characters</h2>
-                        <div class="flex flex-wrap gap-2">
+                    <div class="border-t border-zinc-100 pt-4 dark:border-white/5">
+                        <span class="block text-xs font-semibold uppercase tracking-wider text-zinc-500 mb-2">Characters</span>
+                        <div class="flex flex-wrap gap-1.5">
                             @foreach (var charName in _details.Characters)
                             {
-                                <span class="rounded-full border border-zinc-200 bg-zinc-100 px-3 py-1 text-sm text-zinc-600 dark:border-white/10 dark:bg-zinc-800 dark:text-zinc-400">
+                                <span class="rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-xs text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300">
                                     @charName
                                 </span>
                             }
@@ -159,44 +182,51 @@
                     </div>
                 }
 
-                @if (!string.IsNullOrWhiteSpace(_details.ExternalUrl))
-                {
-                    <a href="@_details.ExternalUrl" target="_blank" rel="noreferrer" class="inline-flex items-center rounded-lg border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50 dark:border-blue-400/30 dark:text-blue-300 dark:hover:bg-blue-500/10">
-                        View on VNDB
-                    </a>
-                }
             </div>
         </div>
 
-        <div class="mt-12 border-t border-zinc-200 dark:border-white/10 pt-8">
-            <h2 class="text-2xl font-bold text-zinc-900 dark:text-white mb-6">Comments</h2>
+        <!-- Comments Section -->
+        <div class="mt-12 rounded-3xl border border-zinc-200 bg-white p-6 sm:p-8 shadow-xl dark:border-white/10 dark:bg-zinc-900/90 backdrop-blur-md">
+            <h2 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white mb-6">Discussion</h2>
 
             @if (!_isAdultContentError)
             {
                 <AuthorizeView>
                     <Authorized>
-                        <div class="mb-8">
+                        <div class="mb-8 rounded-2xl border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-800 dark:bg-zinc-950/50">
                             <div class="flex flex-col gap-3">
-                                <textarea @bind="_newCommentContent" placeholder="Write a comment..."
-                                          class="w-full rounded-xl bg-zinc-100 dark:bg-zinc-900 p-4 text-sm text-zinc-900 dark:text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"></textarea>
-                                <div class="flex items-center justify-between">
+                                <textarea @bind="_newCommentContent"
+                                          placeholder="Share your thoughts about this title..."
+                                          rows="3"
+                                          class="w-full rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:placeholder-zinc-500"></textarea>
+
+                                <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
                                     <div class="flex items-center gap-2">
-                                        <label class="text-xs text-zinc-500 dark:text-zinc-400">Upload media</label>
-                                        <input type="file" @onchange="HandleFileUpload" class="text-xs text-zinc-500" />
+                                        <label class="cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                                            <span>Attach Image</span>
+                                            <input type="file" @onchange="HandleFileUpload" class="hidden" />
+                                        </label>
+                                        @if (!string.IsNullOrEmpty(_uploadedMediaUrl))
+                                        {
+                                            <span class="text-xs text-emerald-500 font-medium">✓ Image attached</span>
+                                        }
                                     </div>
-                                    <button @onclick="PostComment" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 transition">Post Comment</button>
+                                    <button @onclick="PostComment" class="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-blue-500 active:scale-95">
+                                        Post Comment
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </Authorized>
                     <NotAuthorized>
-                        <div class="mb-8 p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-center text-sm text-zinc-500">
-                            Please <a href="/Account/Login" class="text-blue-600 hover:underline">login</a> to post comments.
+                        <div class="mb-8 rounded-2xl border border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
+                            Please <a href="/Account/Login" class="font-semibold text-blue-600 hover:underline dark:text-blue-400">log in</a> to participate in the comments.
                         </div>
                     </NotAuthorized>
                 </AuthorizeView>
 
-                <div class="space-y-6">
+                <!-- Comments List -->
+                <div class="space-y-4">
                     @if (_comments == null)
                     {
                         <div class="flex justify-center py-8">
@@ -205,35 +235,46 @@
                     }
                     else if (!_comments.Any())
                     {
-                        <p class="text-center text-zinc-400 py-8">No comments yet. Be the first to share your thoughts!</p>
+                        <p class="py-8 text-center text-sm text-zinc-400">No comments yet. Be the first to share your thoughts!</p>
                     }
                     else
                     {
                         @foreach (var comment in _comments)
                         {
-                            <div class="flex gap-4 p-4 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/5">
-                                <div class="flex-1">
+                            <div class="flex gap-4 rounded-2xl border border-zinc-100 bg-zinc-50/50 p-4 dark:border-white/5 dark:bg-zinc-950/40">
+                                <!-- User Avatar Placeholder -->
+                                <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-sm font-bold text-blue-500">
+                                    @(comment.UserName?.FirstOrDefault().ToString().ToUpper() ?? "U")
+                                </div>
+
+                                <div class="flex-1 min-w-0">
                                     <div class="flex items-center gap-2 mb-1">
-                                        <span class="text-sm font-bold text-zinc-900 dark:text-white">@comment.UserName</span>
-                                        <span class="text-xs text-zinc-500">@comment.CreatedAt.ToLocalTime().ToString("g")</span>
+                                        <span class="text-sm font-bold text-zinc-900 dark:text-white truncate">@comment.UserName</span>
+                                        <span class="text-xs text-zinc-400">@comment.CreatedAt.ToLocalTime().ToString("g")</span>
                                     </div>
-                                    <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-3">@comment.Content</p>
+
+                                    <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 mb-3 whitespace-pre-line">@comment.Content</p>
+
                                     @if (!string.IsNullOrEmpty(comment.MediaUrl))
                                     {
                                         <div class="mb-3">
-                                            <img src="@comment.MediaUrl" class="max-w-xs rounded-lg border border-zinc-200 dark:border-white/10" />
+                                            <img src="@comment.MediaUrl" class="max-w-xs rounded-xl border border-zinc-200 shadow-sm dark:border-white/10" />
                                         </div>
                                     }
+
                                     <div class="flex items-center gap-4">
-                                        <button @onclick="() => AgreeComment(comment.Id)" class="flex items-center gap-1 text-xs text-zinc-500 hover:text-blue-600 transition">
-                                            <span class="text-zinc-400">Agree</span>
-                                            <span class="font-medium">(@comment.AgreeCount)</span>
+                                        <button @onclick="() => AgreeComment(comment.Id)" class="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition">
+                                            <span>Agree</span>
+                                            <span class="rounded-full bg-zinc-200/60 px-1.5 py-0.5 text-[10px] dark:bg-zinc-800">@comment.AgreeCount</span>
                                         </button>
+
                                         <AuthorizeView>
-                                            <Authorized Context="context">
-                                                @if (context.User.Identity?.Name == comment.UserId)
+                                            <Authorized Context="authContext">
+                                                @if (authContext.User.Identity?.Name == comment.UserId)
                                                 {
-                                                    <button @onclick="() => DeleteComment(comment.Id)" class="text-xs text-zinc-500 hover:text-red-600 transition">Delete</button>
+                                                    <button @onclick="() => DeleteComment(comment.Id)" class="text-xs font-medium text-zinc-400 hover:text-red-500 transition">
+                                                        Delete
+                                                    </button>
                                                 }
                                             </Authorized>
                                         </AuthorizeView>
@@ -246,8 +287,8 @@
             }
             else
             {
-                <div class="p-4 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-center text-sm text-zinc-500">
-                    Comments are disabled for this content.
+                <div class="rounded-2xl border border-zinc-200 bg-zinc-50 p-6 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-950">
+                    Comments are disabled for restricted content.
                 </div>
             }
         </div>
@@ -314,6 +355,7 @@
     {
         // Simulating upload
         _uploadedMediaUrl = "https://cdn.example.com/upload-placeholder.jpg";
+        await Task.CompletedTask;
     }
 
     private async Task PostComment()

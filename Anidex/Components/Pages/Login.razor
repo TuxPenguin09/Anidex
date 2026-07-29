@@ -1,21 +1,29 @@
 @page "/login"
 @inject NavigationManager NavigationManager
 
-<PageTitle>Login</PageTitle>
+<PageTitle>Anidex - Login</PageTitle>
 
-<p class="px-6 py-8 text-zinc-500 dark:text-zinc-400">Redirecting to login...</p>
+<div class="flex min-h-[70vh] items-center justify-center px-4">
+    <div class="w-full max-w-sm text-center rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-zinc-900/50 p-8 backdrop-blur-md shadow-xl">
+        <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
+            <div class="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+        </div>
+        <h2 class="text-xl font-bold text-zinc-900 dark:text-white">Redirecting to Login</h2>
+        <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Please wait a moment while we secure your session...</p>
+    </div>
+</div>
 
 @code {
-	[SupplyParameterFromQuery]
-	private string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
 
-	protected override void OnInitialized()
-	{
-		var loginUrl = NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?>
-		{
-			["ReturnUrl"] = ReturnUrl
-		});
+    protected override void OnInitialized()
+    {
+        var loginUrl = NavigationManager.GetUriWithQueryParameters("Account/Login", new Dictionary<string, object?>
+        {
+            ["ReturnUrl"] = ReturnUrl
+        });
 
-		NavigationManager.NavigateTo(loginUrl, forceLoad: true);
-	}
+        NavigationManager.NavigateTo(loginUrl, forceLoad: true);
+    }
 }

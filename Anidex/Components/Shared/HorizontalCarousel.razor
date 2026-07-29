@@ -1,0 +1,86 @@
+﻿@typeparam TItem
+@inject IJSRuntime JS
+
+<div class="relative group">
+    @if (Items != null && Items.Any())
+    {
+        <!-- Left Arrow Button -->
+        <button type="button"
+                class="absolute -left-5 top-1/2 -translate-y-1/2 z-20 hidden group-hover:flex h-11 w-11 items-center justify-center rounded-full bg-zinc-900/90 text-white shadow-2xl border border-white/10 backdrop-blur-md transition-all hover:bg-blue-600 hover:scale-110 active:scale-95 focus:outline-none"
+                @onmouseenter='() => StartHoverScroll("left")'
+                @onmouseleave="StopHoverScroll"
+                @onclick='() => JumpScroll("left")'>
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+
+        <!-- Carousel Track (Scrollbar hidden via inline arbitrary Tailwind classes) -->
+        <div id="@_carouselId" class="flex gap-6 pb-2 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden scroll-smooth">
+            @foreach (var item in Items)
+            {
+                <div class="flex-shrink-0">
+                    @ItemTemplate(item)
+                </div>
+            }
+        </div>
+
+        <!-- Right Arrow Button -->
+        <button type="button"
+                class="absolute -right-5 top-1/2 -translate-y-1/2 z-20 hidden group-hover:flex h-11 w-11 items-center justify-center rounded-full bg-zinc-900/90 text-white shadow-2xl border border-white/10 backdrop-blur-md transition-all hover:bg-blue-600 hover:scale-110 active:scale-95 focus:outline-none"
+                @onmouseenter='() => StartHoverScroll("right")'
+                @onmouseleave="StopHoverScroll"
+                @onclick='() => JumpScroll("right")'>
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+            </svg>
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public IEnumerable<TItem>? Items { get; set; }
+
+    [Parameter, EditorRequired]
+    public RenderFragment<TItem> ItemTemplate { get; set; } = default!;
+
+    // Generates a unique HTML ID for each carousel instance
+    private readonly string _carouselId = $"carousel-{Guid.NewGuid():N}";
+
+    private async Task StartHoverScroll(string direction)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("carouselScroll.startScroll", _carouselId, direction);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"JS scroll error: {ex.Message}");
+        }
+    }
+
+    private async Task StopHoverScroll()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("carouselScroll.stopScroll");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"JS scroll error: {ex.Message}");
+        }
+    }
+
+    private async Task JumpScroll(string direction)
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("carouselScroll.jumpScroll", _carouselId, direction);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"JS scroll error: {ex.Message}");
+        }
+    }
+}
