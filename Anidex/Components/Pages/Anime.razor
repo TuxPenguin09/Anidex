@@ -1,53 +1,176 @@
 @page "/anime"
 @using Anidex.Components.Shared
+@using Anidex.Models
 @inject Anidex.Services.MediaService MediaService
 
-<PageTitle>Anime - Anidex</PageTitle>
+<PageTitle>Anidex - Anime Directory</PageTitle>
 
 <div class="mx-auto max-w-7xl px-6 py-8">
-    <div class="flex items-center justify-between mb-8">
-        <h1 class="text-3xl font-bold text-zinc-900 dark:text-white">Recommended Anime</h1>
+
+    <!-- Page Header & Search/Filter Controls -->
+    <div class="mb-8 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-zinc-900 dark:text-white">Anime Directory</h1>
+                <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Explore and filter top anime titles</p>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 p-4">
+            <!-- Search Filter (Applies on Enter or Search Icon Click) -->
+            <div>
+                <label class="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">Search Title</label>
+                <div class="relative flex items-center">
+                    <input @bind="_searchQuery"
+                           @onkeyup="HandleKeyUp"
+                           type="text"
+                           placeholder="Type & press Enter..."
+                           class="w-full rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10" />
+                    <button @onclick="ApplyFilters" class="absolute right-2 p-1 text-zinc-400 hover:text-white" title="Search">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Genre Select (Applies Instantly) -->
+            <div>
+                <label class="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">Genre</label>
+                <select @bind="_selectedGenre" @bind:after="ApplyFilters"
+                        class="w-full rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Genres</option>
+                    <option value="Action">Action</option>
+                    <option value="Adventure">Adventure</option>
+                    <option value="Comedy">Comedy</option>
+                    <option value="Drama">Drama</option>
+                    <option value="Fantasy">Fantasy</option>
+                    <option value="Sci-Fi">Sci-Fi</option>
+                </select>
+            </div>
+
+            <!-- Sort By Select (Applies Instantly) -->
+            <div>
+                <label class="block text-xs font-medium text-zinc-500 dark:text-zinc-400 mb-1">Sort By</label>
+                <select @bind="_sortBy" @bind:after="ApplyFilters"
+                        class="w-full rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="popularity">Most Popular</option>
+                    <option value="score">Highest Score</option>
+                    <option value="title">Title (A-Z)</option>
+                </select>
+            </div>
+        </div>
     </div>
 
-    @if (_recommendedAnime == null)
+    <!-- Anime Grid Display -->
+    @if (_filteredAnime == null)
     {
-        <div class="flex items-center justify-center py-12">
+        <div class="flex items-center justify-center py-20">
             <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
-            <span class="ml-3 text-zinc-400">Loading recommendations...</span>
+            <span class="ml-3 text-zinc-400">Loading directory...</span>
         </div>
     }
-    else if (!_recommendedAnime.Any())
+    else if (!_filteredAnime.Any())
     {
-        <div class="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 px-6 py-12 text-center text-zinc-400">
-            No recommendations found.
+        <div class="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 px-6 py-16 text-center text-zinc-400">
+            No anime found matching your filters.
         </div>
     }
     else
     {
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            @foreach (var anime in _recommendedAnime)
+            @foreach (var anime in _filteredAnime)
             {
-                <div class="flex justify-center">
-                    <MediaCard Item="anime" />
-                </div>
+                <MediaCard Item="anime" />
             }
         </div>
+
+        <!-- Pagination Controls -->
+        <div class="mt-12 flex items-center justify-center gap-4">
+            <button class="rounded-lg border border-zinc-200 dark:border-white/10 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
+                    disabled="@(_currentPage == 1)"
+                    @onclick="PreviousPage">
+                Previous
+            </button>
+            <span class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Page @_currentPage</span>
+            <button class="rounded-lg border border-zinc-200 dark:border-white/10 px-4 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                    @onclick="NextPage">
+                Next
+            </button>
+        </div>
     }
+
 </div>
 
 @code {
-    private List<Anidex.Models.Media>? _recommendedAnime;
+    private List<Media>? _allAnime;
+    private List<Media>? _filteredAnime;
+
+    private string _searchQuery = string.Empty;
+    private string _selectedGenre = string.Empty;
+    private string _sortBy = "popularity";
+    private int _currentPage = 1;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            _recommendedAnime = await MediaService.GetRecommendedAnimeAsync();
+            // Fetch initial batch from MediaService
+            _allAnime = await MediaService.GetRecommendedAnimeAsync();
+            ApplyFilters();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
-            _recommendedAnime = new List<Anidex.Models.Media>();
+            Console.WriteLine($"Error fetching anime directory: {ex.Message}");
+            _allAnime = new List<Media>();
+            _filteredAnime = new List<Media>();
         }
+    }
+
+    private void HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            ApplyFilters();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        if (_allAnime == null) return;
+
+        var result = _allAnime.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_searchQuery))
+        {
+            result = result.Where(a => a.Title != null && a.Title.Contains(_searchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (_sortBy == "score")
+        {
+            result = result.OrderByDescending(a => a.Score ?? 0);
+        }
+        else if (_sortBy == "title")
+        {
+            result = result.OrderBy(a => a.Title);
+        }
+
+        _filteredAnime = result.ToList();
+    }
+
+    private void PreviousPage()
+    {
+        if (_currentPage > 1)
+        {
+            _currentPage--;
+            // Page logic can be wired to backend calls
+        }
+    }
+
+    private void NextPage()
+    {
+        _currentPage++;
+        // Page logic can be wired to backend calls
     }
 }

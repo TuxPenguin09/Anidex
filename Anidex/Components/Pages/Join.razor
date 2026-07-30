@@ -1,21 +1,29 @@
 @page "/join"
 @inject NavigationManager NavigationManager
 
-<PageTitle>Join</PageTitle>
+<PageTitle>Anidex - Join</PageTitle>
 
-<p class="px-6 py-8 text-zinc-500 dark:text-zinc-400">Redirecting to registration...</p>
+<div class="flex min-h-[70vh] items-center justify-center px-4">
+    <div class="w-full max-w-sm text-center rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-zinc-900/50 p-8 backdrop-blur-md shadow-xl">
+        <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-500/10 text-blue-500">
+            <div class="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent"></div>
+        </div>
+        <h2 class="text-xl font-bold text-zinc-900 dark:text-white">Setting up registration...</h2>
+        <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Taking you to the registration page.</p>
+    </div>
+</div>
 
 @code {
-	[SupplyParameterFromQuery]
-	private string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
 
-	protected override void OnInitialized()
-	{
-		var registerUrl = NavigationManager.GetUriWithQueryParameters("Account/Join", new Dictionary<string, object?>
-		{
-			["ReturnUrl"] = ReturnUrl
-		});
+    protected override void OnInitialized()
+    {
+        var registerUrl = NavigationManager.GetUriWithQueryParameters("Account/Join", new Dictionary<string, object?>
+        {
+            ["ReturnUrl"] = ReturnUrl
+        });
 
-		NavigationManager.NavigateTo(registerUrl, forceLoad: true);
-	}
+        NavigationManager.NavigateTo(registerUrl, forceLoad: true);
+    }
 }

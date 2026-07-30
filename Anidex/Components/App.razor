@@ -17,6 +17,41 @@
     <ReconnectModal />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script src="@Assets["Components/Account/Shared/PasskeySubmit.razor.js"]" type="module"></script>
+    <script>
+            window.carouselScroll = {
+                scrollInterval: null,
+
+                startScroll: function (elementId, direction) {
+                    const container = document.getElementById(elementId);
+                    if (!container) return;
+
+                    this.stopScroll(); // Clear any existing timer
+
+                    const step = direction === 'right' ? 6 : -6; // Smooth hover speed
+                    this.scrollInterval = setInterval(() => {
+                        container.scrollLeft += step;
+                    }, 10);
+                },
+
+                stopScroll: function () {
+                    if (this.scrollInterval) {
+                        clearInterval(this.scrollInterval);
+                        this.scrollInterval = null;
+                    }
+                },
+
+                jumpScroll: function (elementId, direction) {
+                    const container = document.getElementById(elementId);
+                    if (!container) return;
+
+                    const distance = container.clientWidth * 0.75; // Jump 75% width
+                    container.scrollBy({
+                        left: direction === 'right' ? distance : -distance,
+                        behavior: 'smooth'
+                    });
+                }
+            };
+    </script>
 </body>
 
 </html>
