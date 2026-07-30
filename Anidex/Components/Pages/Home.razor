@@ -18,7 +18,7 @@
                     <a href="/anime" class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline">View All</a>
                 </div>
 
-                @if (_recommendedAnime == null)
+                @if (_recommendedLoading)
                 {
                     <div class="flex items-center justify-center py-12">
                         <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
@@ -43,75 +43,147 @@
 
             <!-- 2. Summer 2026 Anime -->
             <section>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-white mb-4">Summer 2026 Anime</h1>
+                <div class="flex items-center justify-between mb-4">
+                    <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Summer 2026 Anime</h1>
+                </div>
 
-                <HorizontalCarousel Items="_summerAnime">
-                    <ItemTemplate Context="anime">
-                        <MediaCard Item="anime" />
-                    </ItemTemplate>
-                </HorizontalCarousel>
+                @if (_summerLoading)
+                {
+                    <div class="flex items-center justify-center py-12">
+                        <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                        <span class="ml-3 text-zinc-400">Loading summer anime...</span>
+                    </div>
+                }
+                else if (!_summerAnime.Any())
+                {
+                    <div class="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 px-6 py-12 text-center text-zinc-400">
+                        No summer anime available right now.
+                    </div>
+                }
+                else
+                {
+                    <HorizontalCarousel Items="_summerAnime">
+                        <ItemTemplate Context="anime">
+                            <MediaCard Item="anime" />
+                        </ItemTemplate>
+                    </HorizontalCarousel>
+                }
             </section>
 
             <!-- 3. Recently Added Anime -->
             <section>
-                <h1 class="text-2xl font-bold text-zinc-900 dark:text-white mb-4">Recently Added</h1>
+                <div class="flex items-center justify-between mb-4">
+                    <h1 class="text-2xl font-bold text-zinc-900 dark:text-white">Recently Added</h1>
+                </div>
 
-                <HorizontalCarousel Items="_recentlyAdded">
-                    <ItemTemplate Context="anime">
-                        <MediaCard Item="anime" />
-                    </ItemTemplate>
-                </HorizontalCarousel>
+                @if (_recentLoading)
+                {
+                    <div class="flex items-center justify-center py-12">
+                        <div class="h-8 w-8 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                        <span class="ml-3 text-zinc-400">Loading recently added...</span>
+                    </div>
+                }
+                else if (!_recentlyAdded.Any())
+                {
+                    <div class="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-zinc-900 px-6 py-12 text-center text-zinc-400">
+                        No recently added anime available.
+                    </div>
+                }
+                else
+                {
+                    <HorizontalCarousel Items="_recentlyAdded">
+                        <ItemTemplate Context="anime">
+                            <MediaCard Item="anime" />
+                        </ItemTemplate>
+                    </HorizontalCarousel>
+                }
             </section>
 
         </div>
 
         <!-- RIGHT COLUMN (Sidebar - 25% width) -->
         <div class="w-full lg:w-1/4 space-y-6">
-            <TopTenList Title="Top Airing Anime" Items="_topAiring" />
-            <TopTenList Title="Most Popular" Items="_mostPopular" />
+            @if (_topAiringLoading)
+            {
+                <div class="flex items-center justify-center rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 py-8">
+                    <div class="h-6 w-6 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                </div>
+            }
+            else if (_topAiring.Any())
+            {
+                <TopTenList Title="Top Airing Anime" Items="_topAiring" />
+            }
+
+            @if (_popularLoading)
+            {
+                <div class="flex items-center justify-center rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 py-8">
+                    <div class="h-6 w-6 animate-spin rounded-full border-4 border-blue-500 border-t-transparent"></div>
+                </div>
+            }
+            else if (_mostPopular.Any())
+            {
+                <TopTenList Title="Most Popular" Items="_mostPopular" />
+            }
         </div>
 
     </div>
 </div>
 
 @code {
-    private List<Media>? _recommendedAnime;
+    private List<Media> _recommendedAnime = new();
+    private List<Media> _summerAnime = new();
+    private List<Media> _recentlyAdded = new();
+    private List<RankedMediaItem> _topAiring = new();
+    private List<RankedMediaItem> _mostPopular = new();
 
-    private List<Media> _summerAnime = new()
-    {
-        new Media { Id = "placeholder:1", Source = "MAL", Title = "Placeholder Summer Anime 1", CoverImage = null, Score = 8.2 },
-        new Media { Id = "placeholder:2", Source = "MAL", Title = "Placeholder Summer Anime 2", CoverImage = null, Score = 7.9 },
-        new Media { Id = "placeholder:3", Source = "MAL", Title = "Placeholder Summer Anime 3", CoverImage = null, Score = 8.5 },
-    };
-
-    private List<Media> _recentlyAdded = new()
-    {
-        new Media { Id = "placeholder:4", Source = "MAL", Title = "Placeholder Recent Anime 1", CoverImage = null },
-        new Media { Id = "placeholder:5", Source = "MAL", Title = "Placeholder Recent Anime 2", CoverImage = null },
-    };
-
-    private List<RankedMediaItem> _topAiring = new()
-    {
-        new RankedMediaItem { Rank = 1, Title = "Placeholder Airing 1", Subtitle = "TV, 19 eps, scored 9.15", DetailsUrl = "#" },
-        new RankedMediaItem { Rank = 2, Title = "Placeholder Airing 2", Subtitle = "TV, 12 eps, scored 8.90", DetailsUrl = "#" },
-    };
-
-    private List<RankedMediaItem> _mostPopular = new()
-    {
-        new RankedMediaItem { Rank = 1, Title = "Placeholder Popular 1", Subtitle = "301,411 members", DetailsUrl = "#" },
-        new RankedMediaItem { Rank = 2, Title = "Placeholder Popular 2", Subtitle = "224,910 members", DetailsUrl = "#" },
-    };
+    private bool _recommendedLoading = true;
+    private bool _summerLoading = true;
+    private bool _recentLoading = true;
+    private bool _topAiringLoading = true;
+    private bool _popularLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
+        // Fan out all five loads in parallel; each is isolated so a single
+        // failing section does not break the rest of the page.
+        await Task.WhenAll(
+            TryLoadAsync("recommended", async () =>
+            {
+                _recommendedAnime = await MediaService.GetRecommendedAnimeAsync();
+                _recommendedLoading = false;
+            }),
+            TryLoadAsync("summer", async () =>
+            {
+                _summerAnime = await MediaService.GetSummerAnimeAsync();
+                _summerLoading = false;
+            }),
+            TryLoadAsync("recent", async () =>
+            {
+                _recentlyAdded = await MediaService.GetRecentlyAddedAnimeAsync();
+                _recentLoading = false;
+            }),
+            TryLoadAsync("top-airing", async () =>
+            {
+                _topAiring = await MediaService.GetTopAiringAnimeAsync();
+                _topAiringLoading = false;
+            }),
+            TryLoadAsync("popular", async () =>
+            {
+                _mostPopular = await MediaService.GetMostPopularAnimeAsync();
+                _popularLoading = false;
+            })
+        );
+    }
+
+    private async Task TryLoadAsync(string label, Func<Task> action)
+    {
         try
         {
-            _recommendedAnime = await MediaService.GetRecommendedAnimeAsync();
+            await action();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error fetching recommendations: {ex.Message}");
-            _recommendedAnime = new List<Media>();
+            Console.WriteLine($"[Home/{label}] {ex.Message}");
         }
     }
 }

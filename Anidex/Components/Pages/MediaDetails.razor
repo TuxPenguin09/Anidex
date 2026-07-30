@@ -23,7 +23,7 @@
                 {
                     <p class="text-xs text-red-500/80">This content is restricted to users 18+. Comments are disabled for this content.</p>
                 }
-                <button @onclick="() => OnParametersSetAsync()" class="mt-2 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 hover:underline">
+                <button @onclick="RetryAsync" class="mt-2 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 hover:underline">
                     Try again
                 </button>
             </div>
@@ -309,18 +309,25 @@
         : !string.IsNullOrWhiteSpace(VnId) ? $"vndb:{VnId}" : null;
     private bool IsVisualNovel => _details?.Source == "VNDB";
 
-    protected override async Task OnParametersSetAsync()
+    protected override async Task OnParametersSetAsync() => await LoadAsync();
+
+    private async Task RetryAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
     {
+        _details = null;
+        _comments = null;
         _errorMessage = null;
         _isAdultContentError = false;
+
+        if (MediaId == null)
+        {
+            _errorMessage = "No media item was specified.";
+            return;
+        }
+
         try
         {
-            if (MediaId == null)
-            {
-                _errorMessage = "No media item was specified.";
-                return;
-            }
-
             _details = await MediaService.GetMediaDetailsAsync(MediaId);
             await LoadComments();
         }
@@ -329,12 +336,24 @@
             Console.WriteLine($"Access denied: {ex.Message}");
             _errorMessage = ex.Message;
             _isAdultContentError = true;
-            _details = null;
-            _comments = null;
+        }
+        catch (MalApiException ex)
+        {
+            // Upstream non-2xx from Jikan (e.g. 404, 502). The exception message
+            // already includes the status code, so the user sees the actual
+            // cause instead of a generic "Gateway Error".
+            Console.WriteLine($"[MediaDetails] upstream error: {ex.Message}");
+            _errorMessage = ex.Message;
+        }
+        catch (HttpRequestException ex)
+        {
+            // Transport-level failure (DNS, TCP, Polly timeout, etc.).
+            Console.WriteLine($"[MediaDetails] transport error: {ex.Message}");
+            _errorMessage = $"Network error talking to upstream API: {ex.Message}";
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading details: {ex.Message}");
+            Console.WriteLine($"[MediaDetails] unexpected error: {ex}");
             _errorMessage = "We encountered a problem fetching the media details. This might be due to API rate limits or an invalid ID.";
         }
     }

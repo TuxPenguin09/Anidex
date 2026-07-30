@@ -78,6 +78,160 @@ public class MalService
         return media;
     }
 
+    public async Task<List<Media>> GetSummerAnimeAsync(int year, string season)
+    {
+        if (string.IsNullOrWhiteSpace(season))
+        {
+            season = "summer";
+        }
+
+        var response = await _httpClient.GetAsync($"seasons/{year}/{season}?sfw=true&limit=25");
+        response.EnsureSuccessStatusCode();
+
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+
+        var media = new List<Media>();
+        foreach (var entry in document.RootElement.GetProperty("data").EnumerateArray())
+        {
+            // Defence-in-depth: sfw=true already excludes adult titles, but re-check
+            // so a future API change can never accidentally surface Rx content.
+            if (IsAdultContent(entry))
+            {
+                continue;
+            }
+
+            media.Add(new Media
+            {
+                Id = $"mal:{entry.GetProperty("mal_id").GetInt32()}",
+                Source = "MAL",
+                Title = entry.GetProperty("title").GetString() ?? string.Empty,
+                CoverImage = GetCoverImageUrl(entry),
+                Score = ReadScore(entry),
+                Released = ReadReleased(entry),
+                IsAdult = false,
+            });
+        }
+
+        return media;
+    }
+
+    public async Task<List<Media>> GetCurrentSeasonAsync()
+    {
+        var response = await _httpClient.GetAsync("seasons/now?sfw=true&limit=25");
+        response.EnsureSuccessStatusCode();
+
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+
+        var media = new List<Media>();
+        foreach (var entry in document.RootElement.GetProperty("data").EnumerateArray())
+        {
+            if (IsAdultContent(entry))
+            {
+                continue;
+            }
+
+            media.Add(new Media
+            {
+                Id = $"mal:{entry.GetProperty("mal_id").GetInt32()}",
+                Source = "MAL",
+                Title = entry.GetProperty("title").GetString() ?? string.Empty,
+                CoverImage = GetCoverImageUrl(entry),
+                Score = ReadScore(entry),
+                Released = ReadReleased(entry),
+                IsAdult = false,
+            });
+        }
+
+        return media;
+    }
+
+    public async Task<List<RankedMediaItem>> GetTopAiringAnimeAsync()
+    {
+        var response = await _httpClient.GetAsync("top/anime?filter=airing&limit=10&sfw=true");
+        response.EnsureSuccessStatusCode();
+
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+
+        var items = new List<RankedMediaItem>();
+        var rank = 1;
+        foreach (var entry in document.RootElement.GetProperty("data").EnumerateArray())
+        {
+            if (IsAdultContent(entry))
+            {
+                continue;
+            }
+
+            items.Add(BuildRankedAiring(entry, rank++));
+            if (items.Count >= 10)
+            {
+                break;
+            }
+        }
+
+        return items;
+    }
+
+    public async Task<List<RankedMediaItem>> GetMostPopularAnimeAsync()
+    {
+        var response = await _httpClient.GetAsync("top/anime?filter=bypopularity&limit=10&sfw=true");
+        response.EnsureSuccessStatusCode();
+
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+
+        var items = new List<RankedMediaItem>();
+        var rank = 1;
+        foreach (var entry in document.RootElement.GetProperty("data").EnumerateArray())
+        {
+            if (IsAdultContent(entry))
+            {
+                continue;
+            }
+
+            items.Add(BuildRankedPopular(entry, rank++));
+            if (items.Count >= 10)
+            {
+                break;
+            }
+        }
+
+        return items;
+    }
+
+    public async Task<List<Media>> GetRecentlyAddedAnimeAsync()
+    {
+        var response = await _httpClient.GetAsync("anime?order_by=start_date&sort=desc&limit=12&sfw=true");
+        response.EnsureSuccessStatusCode();
+
+        using var stream = await response.Content.ReadAsStreamAsync();
+        using var document = await JsonDocument.ParseAsync(stream);
+
+        var media = new List<Media>();
+        foreach (var entry in document.RootElement.GetProperty("data").EnumerateArray())
+        {
+            if (IsAdultContent(entry))
+            {
+                continue;
+            }
+
+            media.Add(new Media
+            {
+                Id = $"mal:{entry.GetProperty("mal_id").GetInt32()}",
+                Source = "MAL",
+                Title = entry.GetProperty("title").GetString() ?? string.Empty,
+                CoverImage = GetCoverImageUrl(entry),
+                Score = ReadScore(entry),
+                Released = ReadReleased(entry),
+                IsAdult = false,
+            });
+        }
+
+        return media;
+    }
+
     public async Task<MediaDetails> GetAnimeDetailsAsync(string id)
     {
         // Extract MAL ID from format "mal:12345"
@@ -85,11 +239,12 @@ public class MalService
 
         try
         {
-            var response = await _httpClient.GetAsync($"anime/{malId}");
+            var response = await GetWithRetryAsync($"anime/{malId}");
             if (!response.IsSuccessStatusCode)
             {
                 Console.WriteLine($"MAL API Error: {response.StatusCode} for anime/{malId}");
-                throw new HttpRequestException($"MAL API returned {response.StatusCode}");
+                var msg = $"Jikan returned {(int)response.StatusCode} {response.ReasonPhrase} for anime/{malId}";
+                throw new MalApiException((int)response.StatusCode, msg);
             }
 
             using var stream = await response.Content.ReadAsStreamAsync();
@@ -187,6 +342,99 @@ public class MalService
         }
 
         return false;
+    }
+
+    private async Task<HttpResponseMessage> GetWithRetryAsync(string relativeUrl)
+    {
+        // Retries only on transient upstream errors (5xx + 429). 4xx is treated
+        // as a caller error (bad id, etc.) and surfaced immediately.
+        const int maxAttempts = 2;
+        HttpResponseMessage? response = null;
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            response = await _httpClient.GetAsync(relativeUrl);
+            if (response.IsSuccessStatusCode)
+            {
+                return response;
+            }
+
+            var code = (int)response.StatusCode;
+            var transient = code >= 500 || code == 429;
+            if (!transient || attempt == maxAttempts)
+            {
+                return response;
+            }
+
+            response.Dispose();
+            await Task.Delay(500);
+        }
+
+        return response!;
+    }
+
+    private static double? ReadScore(JsonElement entry)
+        => entry.TryGetProperty("score", out var s) && s.ValueKind == JsonValueKind.Number
+            ? s.GetDouble()
+            : (double?)null;
+
+    private static string? ReadReleased(JsonElement entry)
+    {
+        if (entry.TryGetProperty("aired", out var aired) &&
+            aired.ValueKind == JsonValueKind.Object &&
+            aired.TryGetProperty("string", out var s) &&
+            s.ValueKind == JsonValueKind.String)
+        {
+            return s.GetString();
+        }
+        return null;
+    }
+
+    private static RankedMediaItem BuildRankedAiring(JsonElement entry, int rank)
+    {
+        var title = entry.GetProperty("title").GetString() ?? string.Empty;
+        var malId = entry.GetProperty("mal_id").GetInt32();
+        var type = entry.TryGetProperty("type", out var t) && t.ValueKind == JsonValueKind.String
+            ? t.GetString() : null;
+        var eps = entry.TryGetProperty("episodes", out var e) && e.ValueKind == JsonValueKind.Number
+            ? (int?)e.GetInt32() : null;
+        var score = ReadScore(entry);
+
+        var subtitleParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(type)) subtitleParts.Add(type!);
+        if (eps.HasValue) subtitleParts.Add($"{eps} eps");
+        if (score.HasValue) subtitleParts.Add($"scored {score.Value:0.00}");
+
+        return new RankedMediaItem
+        {
+            Rank = rank,
+            Title = title,
+            CoverImage = GetCoverImageUrl(entry),
+            Subtitle = string.Join(", ", subtitleParts),
+            DetailsUrl = $"/media/mal:{malId}",
+        };
+    }
+
+    private static RankedMediaItem BuildRankedPopular(JsonElement entry, int rank)
+    {
+        var title = entry.GetProperty("title").GetString() ?? string.Empty;
+        var malId = entry.GetProperty("mal_id").GetInt32();
+        var type = entry.TryGetProperty("type", out var t) && t.ValueKind == JsonValueKind.String
+            ? t.GetString() : null;
+        var members = entry.TryGetProperty("members", out var m) && m.ValueKind == JsonValueKind.Number
+            ? (int?)m.GetInt32() : null;
+
+        var subtitleParts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(type)) subtitleParts.Add(type!);
+        if (members.HasValue) subtitleParts.Add($"{members.Value:N0} members");
+
+        return new RankedMediaItem
+        {
+            Rank = rank,
+            Title = title,
+            CoverImage = GetCoverImageUrl(entry),
+            Subtitle = string.Join(", ", subtitleParts),
+            DetailsUrl = $"/media/mal:{malId}",
+        };
     }
 
     private static string? GetCoverImageUrl(JsonElement entry)

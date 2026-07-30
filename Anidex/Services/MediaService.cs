@@ -20,6 +20,72 @@ public class MediaService
             .ToList();
     }
 
+    /// <summary>
+    /// Summer 2026 anime. Tries <c>seasons/2026/summer</c> first; if Jikan hasn't
+    /// populated that bucket yet, falls back to the current season so the section
+    /// isn't empty in the meantime. Adult content is filtered defensively.
+    /// </summary>
+    public async Task<List<Media>> GetSummerAnimeAsync()
+    {
+        try
+        {
+            var result = await _malService.GetSummerAnimeAsync(2026, "summer");
+            if (result.Count > 0)
+            {
+                return result.Where(m => !m.IsAdult).ToList();
+            }
+
+            var fallback = await _malService.GetCurrentSeasonAsync();
+            return fallback.Where(m => !m.IsAdult).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MediaService.GetSummerAnimeAsync: {ex.Message}");
+            return new List<Media>();
+        }
+    }
+
+    public async Task<List<RankedMediaItem>> GetTopAiringAnimeAsync()
+    {
+        try
+        {
+            return await _malService.GetTopAiringAnimeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MediaService.GetTopAiringAnimeAsync: {ex.Message}");
+            return new List<RankedMediaItem>();
+        }
+    }
+
+    public async Task<List<RankedMediaItem>> GetMostPopularAnimeAsync()
+    {
+        try
+        {
+            return await _malService.GetMostPopularAnimeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MediaService.GetMostPopularAnimeAsync: {ex.Message}");
+            return new List<RankedMediaItem>();
+        }
+    }
+
+    public async Task<List<Media>> GetRecentlyAddedAnimeAsync()
+    {
+        try
+        {
+            return (await _malService.GetRecentlyAddedAnimeAsync())
+                .Where(m => !m.IsAdult)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"MediaService.GetRecentlyAddedAnimeAsync: {ex.Message}");
+            return new List<Media>();
+        }
+    }
+
     // Visual Novel recommendations have been disabled to prevent accidental exposure to adult content
     public async Task<List<Media>> GetRecommendedVisualNovelsAsync()
     {
