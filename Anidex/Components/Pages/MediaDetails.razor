@@ -7,7 +7,6 @@
 @inject Anidex.Services.MediaService MediaService
 @inject Anidex.Services.CommentService CommentService
 @inject AuthenticationStateProvider AuthStateProvider
-@inject HttpClient HttpClient
 
 <PageTitle>@(_details?.Title ?? "Loading...") - Anidex</PageTitle>
 
@@ -210,19 +209,40 @@
 
                                 <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
                                     <div class="flex items-center gap-2">
-                                        <InputFile OnChange="HandleFileUpload" class="hidden" />
-                                        <label class="cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
-                                            Attach Image
-                                        </label>
-                                        @if (!string.IsNullOrEmpty(_uploadedMediaUrl))
-                                        {
-                                            <span class="text-xs text-emerald-500 font-medium">✓ Image attached</span>
-                                        }
-                                    </div>
+                                    @* Nested input + label gives us native "click label → open file picker"
+                                       behavior. `sr-only` (visually hidden but in layout / focusable)
+                                       is used instead of `hidden` because a `display: none` <input
+                                       type="file"> is ignored by the file picker trigger in several
+                                       browsers. `accept` hints the picker to images only. *@
+                                    <label class="cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
+                                        Attach Images
+                                        <InputFile OnChange="HandleFileUpload" multiple accept="image/*" class="sr-only" />
+                                    </label>
+                                    <span class="text-xs text-zinc-500 dark:text-zinc-400">@_pendingImages.Count / @MaxImagesPerComment</span>
+                                </div>
                                     <button @onclick="PostComment" disabled="@_isPosting" class="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
                                         @(_isPosting ? "Posting…" : "Post Comment")
                                     </button>
                                 </div>
+
+                                @if (_pendingImages.Count > 0)
+                                {
+                                    <div class="grid grid-cols-4 gap-2 pt-2">
+                                        @for (var i = 0; i < _pendingImages.Count; i++)
+                                        {
+                                            var idx = i;
+                                            <div class="relative aspect-square overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-800">
+                                                <img src="@($"data:{_pendingImages[idx].ContentType};base64,{Convert.ToBase64String(_pendingImages[idx].Bytes)}")"
+                                                     alt="@_pendingImages[idx].FileName"
+                                                     class="h-full w-full object-cover" />
+                                                <button type="button" @onclick="() => RemovePendingImage(idx)"
+                                                        class="absolute right-1 top-1 rounded-full bg-black/60 px-1.5 text-xs font-bold text-white hover:bg-black/80">
+                                                    ×
+                                                </button>
+                                            </div>
+                                        }
+                                    </div>
+                                }
                             </div>
                         </div>
                     </Authorized>
@@ -293,10 +313,40 @@
 
                                         <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 mb-3 whitespace-pre-line">@comment.Content</p>
 
-                                        @if (!string.IsNullOrEmpty(comment.MediaUrl))
+                                        var imageSlots = BuildImageSlots(comment);
+                                        var imageCount = imageSlots.Count;
+                                        @if (imageCount > 0)
                                         {
                                             <div class="mb-3">
-                                                <img src="@comment.MediaUrl" class="max-w-xs rounded-xl border border-zinc-200 shadow-sm dark:border-white/10" />
+                                                @switch (imageCount)
+                                                {
+                                                    case 1:
+                                                        <img src="@imageSlots[0]" class="w-full max-h-[480px] rounded-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                        break;
+                                                    case 2:
+                                                        <div class="grid grid-cols-2 gap-1">
+                                                            <img src="@imageSlots[0]" class="aspect-square w-full rounded-l-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                            <img src="@imageSlots[1]" class="aspect-square w-full rounded-r-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                        </div>
+                                                        break;
+                                                    case 3:
+                                                        <div class="grid grid-cols-2 gap-1">
+                                                            <div class="grid grid-rows-2 gap-1">
+                                                                <img src="@imageSlots[0]" class="aspect-square w-full rounded-tl-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                                <img src="@imageSlots[1]" class="aspect-square w-full rounded-bl-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                            </div>
+                                                            <img src="@imageSlots[2]" class="aspect-square w-full rounded-r-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                        </div>
+                                                        break;
+                                                    default:
+                                                        <div class="grid grid-cols-2 gap-1">
+                                                            <img src="@imageSlots[0]" class="aspect-square w-full rounded-tl-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                            <img src="@imageSlots[1]" class="aspect-square w-full rounded-tr-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                            <img src="@imageSlots[2]" class="aspect-square w-full rounded-bl-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                            <img src="@imageSlots[3]" class="aspect-square w-full rounded-br-xl border border-zinc-200 object-cover shadow-sm dark:border-white/10" alt="attachment" />
+                                                        </div>
+                                                        break;
+                                                }
                                             </div>
                                         }
 
@@ -343,7 +393,7 @@
     private Anidex.Services.MediaDetails? _details;
     private List<Anidex.Models.Comment>? _comments;
     private string _newCommentContent = "";
-    private string? _uploadedMediaUrl;
+    private List<PendingImage> _pendingImages = new();
     private string? _errorMessage;
     private bool _isAdultContentError = false;
 
@@ -354,6 +404,15 @@
     // Tracks an in-flight post so the button can be disabled and we don't
     // fire duplicate requests on rapid clicks.
     private bool _isPosting;
+
+    /// <summary>Maximum number of images allowed per comment.</summary>
+    private const int MaxImagesPerComment = 4;
+
+    /// <summary>Per-file max size (matches the previous UploadController cap).</summary>
+    private const long MaxImageSizeBytes = 5 * 1024 * 1024;
+
+    /// <summary>Local in-memory representation of an image staged for upload.</summary>
+    private sealed record PendingImage(byte[] Bytes, string ContentType, string FileName);
 
     private string? MediaId => !string.IsNullOrWhiteSpace(Id)
         ? Id
@@ -435,59 +494,60 @@
 
     private async Task HandleFileUpload(InputFileChangeEventArgs e)
     {
-        var file = e.File;
-        if (file == null)
-        {
-            _uploadedMediaUrl = null;
-            return;
-        }
-
-        // Validate file type (allow images only)
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
-        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
-        if (!allowedExtensions.Contains(extension))
+        var allowedContentTypes = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            _errorMessage = "Invalid file type. Please upload an image (JPG, PNG, GIF, BMP, WEBP).";
-            return;
-        }
+            "image/jpeg", "image/png", "image/gif", "image/bmp", "image/webp"
+        };
 
-        // Validate file size (limit to 5 MB)
-        const long maxSize = 5 * 1024 * 1024; // 5 MB
-        if (file.Size > maxSize)
+        // Files picked in this selection (the InputFile change event may carry
+        // multiple files when `multiple` is set on the markup). Append up to
+        // MaxImagesPerComment in total — drop excess silently with a warning.
+        var picked = e.GetMultipleFiles(MaxImagesPerComment);
+        foreach (var file in picked)
         {
-            _errorMessage = $"File size exceeds the limit of {maxSize / (1024 * 1024)} MB.";
-            return;
-        }
-
-        try
-        {
-            using var content = new MultipartFormDataContent();
-            await using var stream = file.OpenReadStream(maxSize);
-            var fileContent = new StreamContent(stream);
-            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
-            content.Add(fileContent, "file", file.Name);
-
-            var response = await HttpClient.PostAsync("api/upload", content);
-            if (!response.IsSuccessStatusCode)
+            if (_pendingImages.Count >= MaxImagesPerComment)
             {
-                _errorMessage = $"Upload failed: {response.StatusCode}";
-                return;
+                _errorMessage = $"At most {MaxImagesPerComment} images per comment.";
+                break;
             }
 
-            var uploadResult = await response.Content.ReadFromJsonAsync<UploadResponse>();
-            if (uploadResult == null || string.IsNullOrEmpty(uploadResult.Url))
+            var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+            if (!allowedExtensions.Contains(extension) ||
+                !allowedContentTypes.Contains(file.ContentType ?? string.Empty))
             {
-                _errorMessage = "Upload failed: Invalid response from server.";
-                return;
+                _errorMessage = $"Invalid file type: {file.Name}. Allowed: JPG, PNG, GIF, BMP, WEBP.";
+                continue;
             }
 
-            _uploadedMediaUrl = uploadResult.Url;
+            if (file.Size > MaxImageSizeBytes)
+            {
+                _errorMessage = $"{file.Name} exceeds the {MaxImageSizeBytes / (1024 * 1024)} MB limit.";
+                continue;
+            }
+
+            try
+            {
+                // Buffer the file into a byte[] so we can hand it to the
+                // CommentService as a blob. The stream is single-use; reading
+                // it fully here is the simplest correct approach.
+                await using var stream = file.OpenReadStream(MaxImageSizeBytes);
+                using var ms = new MemoryStream();
+                await stream.CopyToAsync(ms);
+                _pendingImages.Add(new PendingImage(ms.ToArray(), file.ContentType ?? "image/jpeg", file.Name));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MediaDetails] Read file error: {ex.Message}");
+                _errorMessage = $"Failed to read {file.Name}: {ex.Message}";
+            }
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[MediaDetails] Upload error: {ex.Message}");
-            _errorMessage = $"Upload failed: {ex.Message}";
-        }
+    }
+
+    private void RemovePendingImage(int index)
+    {
+        if (index < 0 || index >= _pendingImages.Count) return;
+        _pendingImages.RemoveAt(index);
     }
 
     private async Task PostComment()
@@ -513,16 +573,25 @@
                 UserId = userId,
                 UserName = userName,
                 MediaId = MediaId ?? string.Empty,
-                Content = _newCommentContent,
-                // MediaUrl is intentionally optional — null when no image was attached.
-                MediaUrl = string.IsNullOrWhiteSpace(_uploadedMediaUrl) ? null : _uploadedMediaUrl
+                Content = _newCommentContent
             };
 
+            // Up to MaxImagesPerComment blobs go into the entity's 4 image slots.
+            // CommentService.AddCommentAsync persists the whole Comment in one SaveChanges,
+            // so the blobs land in the same transaction as the text.
+            if (_pendingImages.Count > 0)
+            {
+                if (_pendingImages.Count > 0) { comment.Image1 = _pendingImages[0].Bytes; comment.Image1ContentType = _pendingImages[0].ContentType; }
+                if (_pendingImages.Count > 1) { comment.Image2 = _pendingImages[1].Bytes; comment.Image2ContentType = _pendingImages[1].ContentType; }
+                if (_pendingImages.Count > 2) { comment.Image3 = _pendingImages[2].Bytes; comment.Image3ContentType = _pendingImages[2].ContentType; }
+                if (_pendingImages.Count > 3) { comment.Image4 = _pendingImages[3].Bytes; comment.Image4ContentType = _pendingImages[3].ContentType; }
+            }
+
             await CommentService.AddCommentAsync(comment);
-            Console.WriteLine($"[MediaDetails] Comment posted (MediaId={comment.MediaId}, hasImage={comment.MediaUrl != null})");
+            Console.WriteLine($"[MediaDetails] Comment posted (MediaId={comment.MediaId}, imageCount={_pendingImages.Count})");
 
             _newCommentContent = "";
-            _uploadedMediaUrl = null;
+            _pendingImages.Clear();
             await LoadComments();
         }
         catch (UnauthorizedAccessException ex)
@@ -623,9 +692,18 @@
             : $"{duration.Minutes}m";
     }
 
-    // Helper class for upload response
-    private class UploadResponse
+    /// <summary>
+    /// Returns the streaming endpoint URLs for the image slots the comment
+    /// actually has, in 1–4 order. The Razor switch in the comment template
+    /// uses the count + slot list to render the appropriate layout.
+    /// </summary>
+    private static List<string> BuildImageSlots(Anidex.Models.Comment c)
     {
-        public string? Url { get; set; }
+        var slots = new List<string>(capacity: 4);
+        if (c.Image1 is { Length: > 0 }) slots.Add($"/api/comment/{c.Id}/image/0");
+        if (c.Image2 is { Length: > 0 }) slots.Add($"/api/comment/{c.Id}/image/1");
+        if (c.Image3 is { Length: > 0 }) slots.Add($"/api/comment/{c.Id}/image/2");
+        if (c.Image4 is { Length: > 0 }) slots.Add($"/api/comment/{c.Id}/image/3");
+        return slots;
     }
 }
