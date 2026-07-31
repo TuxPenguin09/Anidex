@@ -1,15 +1,23 @@
+using System.Net.Http.Headers;
 using System.Text.Json;
 using Anidex.Models;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace Anidex.Services;
 
 public class MalService
 {
     private readonly HttpClient _httpClient;
+    private readonly IMemoryCache _cache;
 
-    public MalService(HttpClient httpClient)
+    // Cached payload paired with the upstream ETag so subsequent requests can
+    // revalidate cheaply with If-None-Match and avoid re-parsing on 304.
+    private sealed record JikanCacheEntry(string Json, string? ETag);
+
+    public MalService(HttpClient httpClient, IMemoryCache cache)
     {
         _httpClient = httpClient;
+        _cache = cache;
     }
 
     public async Task<List<Media>> GetRecommendedAnimeAsync()
@@ -239,16 +247,9 @@ public class MalService
 
         try
         {
-            var response = await GetWithRetryAsync($"anime/{malId}");
-            if (!response.IsSuccessStatusCode)
-            {
-                Console.WriteLine($"MAL API Error: {response.StatusCode} for anime/{malId}");
-                var msg = $"Jikan returned {(int)response.StatusCode} {response.ReasonPhrase} for anime/{malId}";
-                throw new MalApiException((int)response.StatusCode, msg);
-            }
-
-            using var stream = await response.Content.ReadAsStreamAsync();
-            using var document = await JsonDocument.ParseAsync(stream);
+            // Cache the body for 5 min; characters change less often, so 10 min.
+            var detailsJson = await GetCachedJsonAsync($"anime/{malId}", TimeSpan.FromMinutes(5));
+            using var document = JsonDocument.Parse(detailsJson);
             var data = document.RootElement.GetProperty("data");
 
             // Check rating for adult content
@@ -262,25 +263,21 @@ public class MalService
                 ? synopsisElement.GetString() ?? "No description available."
                 : "No description available.";
 
-            // Fetch characters from separate endpoint
+            // Fetch characters from separate endpoint — also cached.
             var characters = new List<string>();
             try
             {
-                var charResponse = await _httpClient.GetAsync($"anime/{malId}/characters");
-                if (charResponse.IsSuccessStatusCode)
-                {
-                    using var charStream = await charResponse.Content.ReadAsStreamAsync();
-                    using var charDoc = await JsonDocument.ParseAsync(charStream);
-                    var charData = charDoc.RootElement.GetProperty("data");
+                var charJson = await GetCachedJsonAsync($"anime/{malId}/characters", TimeSpan.FromMinutes(10));
+                using var charDoc = JsonDocument.Parse(charJson);
+                var charData = charDoc.RootElement.GetProperty("data");
 
-                    foreach (var c in charData.EnumerateArray().Take(10))
+                foreach (var c in charData.EnumerateArray().Take(10))
+                {
+                    if (c.TryGetProperty("character", out var charInfo) &&
+                        charInfo.TryGetProperty("name", out var charName) &&
+                        charName.ValueKind == JsonValueKind.String)
                     {
-                        if (c.TryGetProperty("character", out var charInfo) &&
-                            charInfo.TryGetProperty("name", out var charName) &&
-                            charName.ValueKind == JsonValueKind.String)
-                        {
-                            characters.Add(charName.GetString() ?? "");
-                        }
+                        characters.Add(charName.GetString() ?? "");
                     }
                 }
             }
@@ -309,6 +306,60 @@ public class MalService
             Console.WriteLine($"Error fetching anime details: {ex.Message}");
             throw; // Re-throw so the UI can handle it
         }
+    }
+
+    /// <summary>
+    /// Fetches a Jikan URL with in-memory caching and ETag revalidation. On hit,
+    /// sends If-None-Match so Jikan can reply 304 without re-sending the body.
+    /// </summary>
+    private async Task<string> GetCachedJsonAsync(string relativeUrl, TimeSpan ttl)
+    {
+        var cacheKey = $"jikan:{relativeUrl}";
+
+        if (_cache.TryGetValue<JikanCacheEntry>(cacheKey, out var entry) && entry is not null)
+        {
+            // Re-fetch with If-None-Match. If Jikan replies 304 we keep the cached
+            // body; otherwise we replace body + ETag in-place.
+            using var req = new HttpRequestMessage(HttpMethod.Get, relativeUrl);
+            if (!string.IsNullOrEmpty(entry.ETag))
+            {
+                req.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(entry.ETag));
+            }
+
+            using var response = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseContentRead);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
+            {
+                return entry.Json;
+            }
+
+            // Either 200 (new body) or non-2xx — fall through to the standard path.
+            if (response.IsSuccessStatusCode)
+            {
+                var freshBody = await response.Content.ReadAsStringAsync();
+                var freshEtag = response.Headers.ETag?.Tag;
+                _cache.Set(cacheKey, new JikanCacheEntry(freshBody, freshEtag), ttl);
+                return freshBody;
+            }
+
+            // Cache hit but upstream returned a non-success; fall back to the cached
+            // body so the page still renders (better than an empty error state).
+            // The Polly retry policy will have already given the call its retries.
+            if (entry.Json.Length > 0)
+            {
+                return entry.Json;
+            }
+
+            response.EnsureSuccessStatusCode();
+        }
+
+        // Cache miss: fetch, parse, store. Polly retry (registered globally on the
+        // HttpClient) handles transient 5xx/429 here.
+        var initialResponse = await _httpClient.GetAsync(relativeUrl);
+        initialResponse.EnsureSuccessStatusCode();
+        var body = await initialResponse.Content.ReadAsStringAsync();
+        var etag = initialResponse.Headers.ETag?.Tag;
+        _cache.Set(cacheKey, new JikanCacheEntry(body, etag), ttl);
+        return body;
     }
 
     private static bool IsAdultContent(JsonElement entry)

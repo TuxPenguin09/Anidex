@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Polly;
+using Polly.Extensions.Http;
 
 using Anidex.Services;
 
@@ -54,17 +55,37 @@ namespace Anidex
                 client.BaseAddress = new Uri("https://api.jikan.moe/v4/");
                 client.DefaultRequestHeaders.Add("User-Agent", "Anidex-App/1.0");
             })
-            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10)));
+            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10)))
+            .AddPolicyHandler(HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .OrResult(r => (int)r.StatusCode == 429)
+                .WaitAndRetryAsync(
+                    retryCount: 3,
+                    sleepDurationProvider: attempt =>
+                        TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt)) +
+                        TimeSpan.FromMilliseconds(Random.Shared.Next(0, 100))));
 
             builder.Services.AddHttpClient<VNDBService>(client => {
                 client.BaseAddress = new Uri("https://api.vndb.org/kana/");
                 client.DefaultRequestHeaders.Add("User-Agent", "Anidex-App/1.0");
             })
-            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10)));
+            .AddPolicyHandler(Policy.TimeoutAsync<HttpResponseMessage>(TimeSpan.FromSeconds(10)))
+            .AddPolicyHandler(HttpPolicyExtensions
+                .HandleTransientHttpError()
+                .OrResult(r => (int)r.StatusCode == 429)
+                .WaitAndRetryAsync(
+                    retryCount: 3,
+                    sleepDurationProvider: attempt =>
+                        TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt)) +
+                        TimeSpan.FromMilliseconds(Random.Shared.Next(0, 100))));
 
             builder.Services.AddScoped<MediaService>();
             builder.Services.AddScoped<ThemeService>();
             builder.Services.AddScoped<CommentService>();
+
+            // In-memory cache used by MalService for Jikan response caching
+            // (IMemoryCache so per-circuit anonymous requests don't re-hit Jikan).
+            builder.Services.AddMemoryCache();
 
             var app = builder.Build();
 

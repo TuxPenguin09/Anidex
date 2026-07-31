@@ -1,9 +1,13 @@
 @page "/media/{id}"
 @page "/visual-novels/{VnId}"
+@rendermode InteractiveServer
 @using Anidex.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Forms
 @inject Anidex.Services.MediaService MediaService
 @inject Anidex.Services.CommentService CommentService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject HttpClient HttpClient
 
 <PageTitle>@(_details?.Title ?? "Loading...") - Anidex</PageTitle>
 
@@ -72,7 +76,7 @@
             <!-- Details Column -->
             <div class="md:col-span-8 space-y-6">
                 <div>
-                    <h1 tabindex="-1" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-zinc-900 dark:text-white outline-none focus:outline-none">
+                    <h1 tabindex="-1" class="text-3xl sm:text-4xl font-extrabod tracking-tight text-zinc-900 dark:text-white outline-none focus:outline-none">
                         @_details.Title
                     </h1>
 
@@ -181,7 +185,6 @@
                         </div>
                     </div>
                 }
-
             </div>
         </div>
 
@@ -200,19 +203,24 @@
                                           rows="3"
                                           class="w-full rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:placeholder-zinc-500"></textarea>
 
+                                @if (!string.IsNullOrEmpty(_newCommentError))
+                                {
+                                    <p class="text-xs font-medium text-red-600 dark:text-red-400">@_newCommentError</p>
+                                }
+
                                 <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
                                     <div class="flex items-center gap-2">
+                                        <InputFile OnChange="HandleFileUpload" class="hidden" />
                                         <label class="cursor-pointer rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800">
-                                            <span>Attach Image</span>
-                                            <input type="file" @onchange="HandleFileUpload" class="hidden" />
+                                            Attach Image
                                         </label>
                                         @if (!string.IsNullOrEmpty(_uploadedMediaUrl))
                                         {
                                             <span class="text-xs text-emerald-500 font-medium">✓ Image attached</span>
                                         }
                                     </div>
-                                    <button @onclick="PostComment" class="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-blue-500 active:scale-95">
-                                        Post Comment
+                                    <button @onclick="PostComment" disabled="@_isPosting" class="rounded-xl bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-blue-500 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60">
+                                        @(_isPosting ? "Posting…" : "Post Comment")
                                     </button>
                                 </div>
                             </div>
@@ -241,6 +249,7 @@
                     {
                         @foreach (var comment in _comments)
                         {
+                            var isEditing = _editingCommentId.HasValue && _editingCommentId.Value == comment.Id;
                             <div class="flex gap-4 rounded-2xl border border-zinc-100 bg-zinc-50/50 p-4 dark:border-white/5 dark:bg-zinc-950/40">
                                 <!-- User Avatar Placeholder -->
                                 <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/10 text-sm font-bold text-blue-500">
@@ -248,37 +257,70 @@
                                 </div>
 
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="text-sm font-bold text-zinc-900 dark:text-white truncate">@comment.UserName</span>
-                                        <span class="text-xs text-zinc-400">@comment.CreatedAt.ToLocalTime().ToString("g")</span>
-                                    </div>
-
-                                    <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 mb-3 whitespace-pre-line">@comment.Content</p>
-
-                                    @if (!string.IsNullOrEmpty(comment.MediaUrl))
+                                    @if (isEditing)
                                     {
-                                        <div class="mb-3">
-                                            <img src="@comment.MediaUrl" class="max-w-xs rounded-xl border border-zinc-200 shadow-sm dark:border-white/10" />
+                                        <!-- Edit Mode -->
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-sm font-bold text-zinc-900 dark:text-white truncate">@comment.UserName</span>
+                                            <span class="text-xs text-zinc-400">@comment.CreatedAt.ToLocalTime().ToString("g")</span>
+                                        </div>
+
+                                        <textarea @bind="_editedContent"
+                                                  class="w-full mb-2 p-2 border border-zinc-200 rounded bg-white text-zinc-900 dark:bg-zinc-800 dark:text-white"
+                                                  rows="3"></textarea>
+
+                                        @if (!string.IsNullOrEmpty(_editError))
+                                        {
+                                            <p class="text-xs font-medium text-red-600 dark:text-red-400 mb-2">@_editError</p>
+                                        }
+
+                                        <div class="flex justify-end gap-2">
+                                            <button @onclick="() => SaveEdit(comment.Id)" class="rounded bg-blue-600 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-500">
+                                                Save
+                                            </button>
+                                            <button @onclick="() => CancelEdit()" class="rounded bg-gray-500 px-3 py-1 text-sm font-semibold text-white hover:bg-gray-400">
+                                                Cancel
+                                            </button>
                                         </div>
                                     }
+                                    else
+                                    {
+                                        <!-- View Mode -->
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="text-sm font-bold text-zinc-900 dark:text-white truncate">@comment.UserName</span>
+                                            <span class="text-xs text-zinc-400">@comment.CreatedAt.ToLocalTime().ToString("g")</span>
+                                        </div>
 
-                                    <div class="flex items-center gap-4">
-                                        <button @onclick="() => AgreeComment(comment.Id)" class="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition">
-                                            <span>Agree</span>
-                                            <span class="rounded-full bg-zinc-200/60 px-1.5 py-0.5 text-[10px] dark:bg-zinc-800">@comment.AgreeCount</span>
-                                        </button>
+                                        <p class="text-sm leading-relaxed text-zinc-600 dark:text-zinc-300 mb-3 whitespace-pre-line">@comment.Content</p>
 
-                                        <AuthorizeView>
-                                            <Authorized Context="authContext">
-                                                @if (authContext.User.Identity?.Name == comment.UserId)
-                                                {
-                                                    <button @onclick="() => DeleteComment(comment.Id)" class="text-xs font-medium text-zinc-400 hover:text-red-500 transition">
-                                                        Delete
-                                                    </button>
-                                                }
-                                            </Authorized>
-                                        </AuthorizeView>
-                                    </div>
+                                        @if (!string.IsNullOrEmpty(comment.MediaUrl))
+                                        {
+                                            <div class="mb-3">
+                                                <img src="@comment.MediaUrl" class="max-w-xs rounded-xl border border-zinc-200 shadow-sm dark:border-white/10" />
+                                            </div>
+                                        }
+
+                                        <div class="flex items-center gap-4">
+                                            <button @onclick="() => AgreeComment(comment.Id)" class="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 transition">
+                                                <span>Agree</span>
+                                                <span class="rounded-full bg-zinc-200/60 px-1.5 py-0.5 text-[10px] dark:bg-zinc-800">@comment.AgreeCount</span>
+                                            </button>
+
+                                            <AuthorizeView>
+                                                <Authorized Context="authContext">
+                                                    @if (authContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value == comment.UserId)
+                                                    {
+                                                        <button @onclick="() => StartEdit(comment.Id)" class="text-xs font-medium text-zinc-400 hover:text-blue-600 transition">
+                                                            Edit
+                                                        </button>
+                                                        <button @onclick="() => DeleteComment(comment.Id)" class="text-xs font-medium text-zinc-400 hover:text-red-500 transition">
+                                                            Delete
+                                                        </button>
+                                                    }
+                                                </Authorized>
+                                            </AuthorizeView>
+                                        </div>
+                                    }
                                 </div>
                             </div>
                         }
@@ -304,10 +346,23 @@
     private string? _uploadedMediaUrl;
     private string? _errorMessage;
     private bool _isAdultContentError = false;
+
+    // Comment action errors (rendered under the composer / edit form)
+    private string? _newCommentError;
+    private string? _editError;
+
+    // Tracks an in-flight post so the button can be disabled and we don't
+    // fire duplicate requests on rapid clicks.
+    private bool _isPosting;
+
     private string? MediaId => !string.IsNullOrWhiteSpace(Id)
         ? Id
         : !string.IsNullOrWhiteSpace(VnId) ? $"vndb:{VnId}" : null;
     private bool IsVisualNovel => _details?.Source == "VNDB";
+
+    // Edit state
+    private Guid? _editingCommentId;
+    private string _editedContent = "";
 
     protected override async Task OnParametersSetAsync() => await LoadAsync();
 
@@ -351,6 +406,14 @@
             Console.WriteLine($"[MediaDetails] transport error: {ex.Message}");
             _errorMessage = $"Network error talking to upstream API: {ex.Message}";
         }
+        catch (Polly.Timeout.TimeoutRejectedException ex)
+        {
+            // Polly's per-request TimeoutAsync (10s on MalService / VNDBService) fires here.
+            // Without this branch the user sees a generic "Something went wrong" instead
+            // of a hint that the upstream is slow.
+            Console.WriteLine($"[MediaDetails] upstream timeout: {ex.Message}");
+            _errorMessage = "Jikan is slow right now — please retry in a moment.";
+        }
         catch (Exception ex)
         {
             Console.WriteLine($"[MediaDetails] unexpected error: {ex}");
@@ -370,36 +433,111 @@
         }
     }
 
-    private async Task HandleFileUpload(ChangeEventArgs e)
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
     {
-        // Simulating upload
-        _uploadedMediaUrl = "https://cdn.example.com/upload-placeholder.jpg";
-        await Task.CompletedTask;
+        var file = e.File;
+        if (file == null)
+        {
+            _uploadedMediaUrl = null;
+            return;
+        }
+
+        // Validate file type (allow images only)
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
+        var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+        if (!allowedExtensions.Contains(extension))
+        {
+            _errorMessage = "Invalid file type. Please upload an image (JPG, PNG, GIF, BMP, WEBP).";
+            return;
+        }
+
+        // Validate file size (limit to 5 MB)
+        const long maxSize = 5 * 1024 * 1024; // 5 MB
+        if (file.Size > maxSize)
+        {
+            _errorMessage = $"File size exceeds the limit of {maxSize / (1024 * 1024)} MB.";
+            return;
+        }
+
+        try
+        {
+            using var content = new MultipartFormDataContent();
+            await using var stream = file.OpenReadStream(maxSize);
+            var fileContent = new StreamContent(stream);
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, "file", file.Name);
+
+            var response = await HttpClient.PostAsync("api/upload", content);
+            if (!response.IsSuccessStatusCode)
+            {
+                _errorMessage = $"Upload failed: {response.StatusCode}";
+                return;
+            }
+
+            var uploadResult = await response.Content.ReadFromJsonAsync<UploadResponse>();
+            if (uploadResult == null || string.IsNullOrEmpty(uploadResult.Url))
+            {
+                _errorMessage = "Upload failed: Invalid response from server.";
+                return;
+            }
+
+            _uploadedMediaUrl = uploadResult.Url;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MediaDetails] Upload error: {ex.Message}");
+            _errorMessage = $"Upload failed: {ex.Message}";
+        }
     }
 
     private async Task PostComment()
     {
+        if (_isPosting) return; // guard against re-entry on rapid clicks
         if (string.IsNullOrWhiteSpace(_newCommentContent)) return;
         if (_isAdultContentError) return;
 
-        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-        var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? user.Identity?.Name ?? "unknown";
-        var userName = user.Identity?.Name ?? "Anonymous";
+        _isPosting = true;
+        _newCommentError = null;
 
-        var comment = new Anidex.Models.Comment
+        try
         {
-            UserId = userId,
-            UserName = userName,
-            MediaId = MediaId ?? string.Empty,
-            Content = _newCommentContent,
-            MediaUrl = _uploadedMediaUrl
-        };
+            Console.WriteLine("[MediaDetails] PostComment invoked");
 
-        await CommentService.AddCommentAsync(comment);
-        _newCommentContent = "";
-        _uploadedMediaUrl = null;
-        await LoadComments();
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? user.Identity?.Name ?? "unknown";
+            var userName = user.Identity?.Name ?? "Anonymous";
+
+            var comment = new Anidex.Models.Comment
+            {
+                UserId = userId,
+                UserName = userName,
+                MediaId = MediaId ?? string.Empty,
+                Content = _newCommentContent,
+                // MediaUrl is intentionally optional — null when no image was attached.
+                MediaUrl = string.IsNullOrWhiteSpace(_uploadedMediaUrl) ? null : _uploadedMediaUrl
+            };
+
+            await CommentService.AddCommentAsync(comment);
+            Console.WriteLine($"[MediaDetails] Comment posted (MediaId={comment.MediaId}, hasImage={comment.MediaUrl != null})");
+
+            _newCommentContent = "";
+            _uploadedMediaUrl = null;
+            await LoadComments();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _newCommentError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MediaDetails] PostComment error: {ex.Message}");
+            _newCommentError = "Failed to post comment: " + ex.Message;
+        }
+        finally
+        {
+            _isPosting = false;
+        }
     }
 
     private async Task AgreeComment(Guid id)
@@ -410,10 +548,71 @@
 
     private async Task DeleteComment(Guid id)
     {
+        _editError = null;
+
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         var userId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? authState.User.Identity?.Name ?? "unknown";
-        await CommentService.DeleteCommentAsync(id, userId);
-        await LoadComments();
+
+        try
+        {
+            await CommentService.DeleteCommentAsync(id, userId);
+            await LoadComments();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MediaDetails] DeleteComment error: {ex.Message}");
+            _editError = "Delete failed: " + ex.Message;
+        }
+    }
+
+    // Edit methods
+    private void StartEdit(Guid commentId)
+    {
+        var comment = _comments?.FirstOrDefault(c => c.Id == commentId);
+        if (comment != null)
+        {
+            _editingCommentId = commentId;
+            _editedContent = comment.Content;
+        }
+    }
+
+    private async Task SaveEdit(Guid commentId)
+    {
+        if (!_editingCommentId.HasValue || _editingCommentId.Value != commentId) return;
+
+        _editError = null;
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? user.Identity?.Name ?? "unknown";
+
+        try
+        {
+            await CommentService.UpdateCommentAsync(commentId, _editedContent, userId);
+
+            _editingCommentId = null;
+            _editedContent = "";
+            await LoadComments();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            _editError = ex.Message;
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _editError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MediaDetails] SaveEdit error: {ex.Message}");
+            _editError = "Edit failed: " + ex.Message;
+        }
+    }
+
+    private void CancelEdit()
+    {
+        _editingCommentId = null;
+        _editedContent = "";
     }
 
     private static string FormatPlayTime(int minutes)
@@ -422,5 +621,11 @@
         return duration.TotalHours >= 1
             ? $"{(int)duration.TotalHours}h {duration.Minutes}m"
             : $"{duration.Minutes}m";
+    }
+
+    // Helper class for upload response
+    private class UploadResponse
+    {
+        public string? Url { get; set; }
     }
 }

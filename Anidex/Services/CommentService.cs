@@ -29,6 +29,12 @@ public class CommentService
 
     public async Task AddCommentAsync(Comment comment)
     {
+        // Defence-in-depth: the UI hides the composer for anonymous visitors, but
+        // the service must reject unknown callers outright so a signed-in circuit
+        // can't be misused to post under "unknown" or empty IDs.
+        if (string.IsNullOrWhiteSpace(comment.UserId) || comment.UserId == "unknown")
+            throw new UnauthorizedAccessException("Sign in to comment.");
+
         _context.Comments.Add(comment);
         await _context.SaveChangesAsync();
     }
@@ -51,6 +57,17 @@ public class CommentService
             comment.AgreeCount++;
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task UpdateCommentAsync(Guid commentId, string newContent, string userId)
+    {
+        var comment = await _context.Comments.FindAsync(commentId);
+        if (comment == null)
+            throw new KeyNotFoundException("Comment not found.");
+        if (comment.UserId != userId)
+            throw new UnauthorizedAccessException("You are not authorized to edit this comment.");
+        comment.Content = newContent;
+        await _context.SaveChangesAsync();
     }
 
     private List<Comment> BuildCommentTree(List<Comment> allComments)
