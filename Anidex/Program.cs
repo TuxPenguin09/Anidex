@@ -27,6 +27,12 @@ namespace Anidex
             builder.Services.AddScoped<IdentityRedirectManager>();
             builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
+            // MVC pipeline is what backs the comment-image streaming endpoint
+            // (/api/comment/{id}/image/{index}). Without this, the [ApiController]
+            // is never registered and the route falls through to the 404 handler,
+            // so the <img src> renders the alt text and nothing else.
+            builder.Services.AddControllers();
+
             builder.Services.AddAuthentication(options =>
                 {
                     options.DefaultScheme = IdentityConstants.ApplicationScheme;
@@ -112,6 +118,9 @@ namespace Anidex
                 .AddInteractiveServerRenderMode()
                 .AddInteractiveWebAssemblyRenderMode()
                 .AddAdditionalAssemblies(typeof(Client._Imports).Assembly);
+
+            // Map [ApiController]-decorated controllers (e.g. CommentImageController).
+            app.MapControllers();
 
             // Add additional endpoints required by the Identity /Account Razor components.
             app.MapAdditionalIdentityEndpoints();
