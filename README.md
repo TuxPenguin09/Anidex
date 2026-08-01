@@ -34,3 +34,7 @@ This project uses Tailwind CSS v4. The generated stylesheet is `Anidex/wwwroot/a
 - Source file: `Anidex/Styles/app.css`
 - Output file: `Anidex/wwwroot/app.css`
 - Razor files are explicitly scanned via `@source` directives in `Styles/app.css`.
+
+## Members
+- Moritz Chester Saribay
+- John Matthew De Leon
